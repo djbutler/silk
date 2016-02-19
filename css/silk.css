@@ -2,6 +2,7 @@ body {
   font-family: "Helvetica Neue", Helvetica, sans-serif;
   margin: 0 auto 4em auto;
   tab-size: 2;
+  color: #333;
   background-color: #cccccc;
   overflow: hidden;
   -webkit-text-size-adjust: none;
@@ -15,17 +16,20 @@ body {
 }
 
 .blurb {
-  color: #333;
   left: 0;
   max-width: 200px;
 }
 
-.blurb .title {
+.preview {
+  padding: 2em;
+}
+
+.title {
   font-weight: bold;
   margin-bottom: 1em;
 }
 
-.blurb .description {
+.description {
   line-height: 1.5em;
 }
 
