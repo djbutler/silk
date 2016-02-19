@@ -1,2 +1,0 @@
-# silk
-Robot UI
