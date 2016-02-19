@@ -3,7 +3,6 @@ body {
   margin: 0 auto 4em auto;
   tab-size: 2;
   color: #333;
-  background-color: #cccccc;
   overflow: hidden;
   -webkit-text-size-adjust: none;
 }
