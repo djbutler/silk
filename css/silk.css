@@ -19,10 +19,6 @@ body {
   max-width: 200px;
 }
 
-.preview {
-  padding: 2em;
-}
-
 .title {
   font-weight: bold;
   margin-bottom: 1em;
@@ -48,6 +44,29 @@ body {
   margin: 0 auto;
   padding: 0 10px;
 }
+
+.preview-text-box {
+    padding:1.5em 2em;
+    background: rgba(200,200,200,.6);
+}
+
+.preview-image-box {
+  display:block;
+  width:390px;
+  height:290px;
+  box-shadow: 0px 3px 10px #999;
+  padding: 0px;
+}
+.preview-image-box .description {
+  color: #333;
+}
+.preview-image-box:hover {
+  text-decoration: none;
+}
+.preview-image-box:hover .title {
+  text-decoration: underline;
+}
+
 
 h1 {
   font-size: 46px;
