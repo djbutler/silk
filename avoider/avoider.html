@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+    <head>
+        <title>sketch.js &raquo; Basic Example</title>
+        <link rel="stylesheet" href="css/example.css">
+        <style type="text/css">
+            html, body {
+                background: #F51E50;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="container"></div>
+        <script src="js/sketch.js"></script>
+        <script src="helloworld.js"></script>
+        <script>
+
+            var circle = {x: -100, y: -100};
+            var radius = 30;
+            var thickness = 10;
+            var solver;
+
+            Sketch.create({
+                container: document.getElementById( 'container' ),
+                setup: function() {
+                    solver = new Module.AvoiderSolver;
+                },
+                touchmove: function() {
+                    solver.goal_pose = [this.touches[0].x, this.touches[0].y];
+                    solver.stepSolve(10);
+                    circle.x = solver.current_pose[0];
+                    circle.y = solver.current_pose[1];
+                },
+                draw: function() {
+                    // draw line from cursor to annulus
+                    this.beginPath();
+                    this.lineWidth = 2*thickness;
+                    this.strokeStyle = '#333333';
+                    this.lineCap = 'round';
+                    this.moveTo(circle.x, circle.y);
+                    this.lineTo(this.touches[0].x, this.touches[0].y);
+                    this.stroke();
+                    // draw annulus that avoids the cursor
+                    this.beginPath();
+                    this.arc( circle.x, circle.y, radius + thickness, 0, TWO_PI );
+                    this.lineWidth = thickness;
+                    this.globalAlpha = 0.5;
+                    this.strokeStyle = '#CCCCCC';
+                    this.stroke();
+                }
+            })
+
+        </script>
+    </body>
+</html>
