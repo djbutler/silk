@@ -37,7 +37,9 @@
                 var camera, scene, renderer, objects;
                 var controls;
                 var particleLight;
+
                 var dae;
+                var collada;
 
                 var kinematics;
                 var kinematicsTween;
@@ -45,8 +47,9 @@
 
                 var loader = new THREE.ColladaLoader();
                 loader.options.convertUpAxis = true;
-                loader.load( '../models/pr2/collada/openrave-pr2.dae', function ( collada ) {
+                loader.load( '../models/pr2/collada/openrave-pr2.dae', function ( collada_ ) {
 
+                    collada = collada_;
                     dae = collada.scene;
 
                     dae.traverse( function ( child ) {
