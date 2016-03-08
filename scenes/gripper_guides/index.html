@@ -247,23 +247,8 @@
                 function render() {
                     controls.update();
                     renderer.render( scene, camera );
-                    // update the picking ray with the camera and mouse position    
-                    raycaster.setFromCamera( mouse, camera );   
                     // update l_gripper_guide
                     updateGripperGuides();
-                    // calculate objects intersecting the picking ray
-                    var intersects = raycaster.intersectObject( dae, true );
-                    ctx = renderer2d.domElement.getContext('2d');
-                    ctx.clearRect(0, 0, renderer2d.domElement.width, renderer2d.domElement.height);
-                    if (intersects.length > 0) {
-                        // draw annulus around cursor
-                        ctx.beginPath();
-                        ctx.arc( cursor.x, cursor.y, radius + thickness, 0, TWO_PI );
-                        ctx.lineWidth = thickness;
-                        ctx.globalAlpha = 0.5;
-                        ctx.strokeStyle = '#CC6666';
-                        ctx.stroke();
-                    }
                 }
 
                 // Returns a random integer between min (inclusive) and max (inclusive)
