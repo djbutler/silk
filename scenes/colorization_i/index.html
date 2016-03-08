@@ -10,8 +10,8 @@
         <div class="column">
 
             <div class="blurb">
-                <div class="title">Gripper Guides</div>
-                <div class="description">Vertical guides help the eye gauge the 3D position of the PR2 grippers.</div>
+                <div class="title">Colorization I</div>
+                <div class="description">A hue gradient running down the kinematic tree.</div>
             </div>
 
             <div class="navigation">
@@ -140,19 +140,12 @@
 
                     // Add the COLLADA
                     THREE.Object3D.prototype.traverseDepth = function (a, i) {if(!1!==this.visible){a(this, i);for(var b=this.children,c=0,d=b.length;c<d;c++)b[c].traverseDepth(a,i+1)}};
-                    dae.traverseDepth(function(obj, i) { if (obj.material) { obj.material.color.setHex(0x999999) ; } }, 0);
-                    scene.add( dae );
 
-                    // Gripper guides
-                    var material = new THREE.LineBasicMaterial( { color: 0xff3333, linewidth: 1 } );
-                    gripper_guides = [];
-                    for (var i = 0; i < 2; i++) {
-                        var geometry = new THREE.Geometry();
-                        geometry.vertices.push(new THREE.Vector3);
-                        geometry.vertices.push(new THREE.Vector3);
-                        gripper_guides.push(new THREE.Line(geometry, material));
-                        scene.add(gripper_guides[i]);
-                    }
+                    // Colorize the robot
+                    dae.traverseDepth(function(obj, i) { if (obj.material) { obj.material.color.setHSL(i/17, 0.25, 0.4); } }, 0);
+                    // dae.traverseDepth(function(obj, i) { if (obj.material) { obj.material.color.setHex(10170980) ; } }, 0);
+                    // dae.traverseDepth(function(obj, i) { if (obj.material) { obj.material.color.setHex(0x66cc99 * i) ; } }, 0);
+                    scene.add( dae );
 
                     // Lights
 
@@ -219,33 +212,15 @@
 
                 }
 
-                //
-
                 function animate() {
                     render();
                     stats.update();
                     TWEEN.update();
                 }
 
-                function updateGripperGuides() {
-                    var initials = ['l','r'];
-                    for (var i = 0; i < 2; i++) {
-                        gripper_guide = gripper_guides[i];
-                        gripper_guide.geometry.vertices[0].addVectors( dae.getObjectByName(initials[i] + "_gripper_l_finger_tip_link").getWorldPosition(),
-                                                                       dae.getObjectByName(initials[i] + "_gripper_r_finger_tip_link").getWorldPosition() );
-                        gripper_guide.geometry.vertices[0].divideScalar(2.0);
-                        // l_gripper_guide.geometry.vertices[0].y -= 0.6;
-                        gripper_guide.geometry.vertices[1] = gripper_guide.geometry.vertices[0].clone();
-                        gripper_guide.geometry.vertices[1].y = 0;
-                        gripper_guide.geometry.verticesNeedUpdate = true;
-                    }
-                }
-
                 function render() {
                     controls.update();
                     renderer.render( scene, camera );
-                    // update l_gripper_guide
-                    updateGripperGuides();
                 }
 
                 // Returns a random integer between min (inclusive) and max (inclusive)
