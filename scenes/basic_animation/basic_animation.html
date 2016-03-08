@@ -4,7 +4,7 @@
         <title>Silk - Basic Animation</title>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-        <link rel="stylesheet" type="text/css" href="../css/silk.css">
+        <link rel="stylesheet" type="text/css" href="../../css/silk.css">
     </head>
     <body style="background-color: #cccccc; overflow: hidden">
         <div class="column">
@@ -15,18 +15,18 @@
             </div>
 
             <div class="navigation">
-                <a href="../">Top</a> / <a href="../about.html">About</a>
+                <a href="../../">Top</a> / <a href="../../about.html">About</a>
             </div>
 
             <script src="http://cdnjs.cloudflare.com/ajax/libs/three.js/r73/three.min.js"></script>
 
-            <script src="../js/libs/tween.min.js"></script>
-            <script src="../js/loaders/ColladaLoader.js"></script>
+            <script src="../../js/libs/tween.min.js"></script>
+            <script src="../../js/loaders/ColladaLoader.js"></script>
 
-            <script src="../js/controls/TrackballControls.js"></script>
+            <script src="../../js/controls/TrackballControls.js"></script>
 
-            <script src="../js/Detector.js"></script>
-            <script src="../js/libs/stats.min.js"></script>
+            <script src="../../js/Detector.js"></script>
+            <script src="../../js/libs/stats.min.js"></script>
 
             <script>
 
@@ -47,7 +47,7 @@
 
                 var loader = new THREE.ColladaLoader();
                 loader.options.convertUpAxis = true;
-                loader.load( '../models/pr2/collada/openrave-pr2.dae', function ( collada_ ) {
+                loader.load( '../../models/pr2/collada/openrave-pr2.dae', function ( collada_ ) {
 
                     collada = collada_;
                     dae = collada.scene;
