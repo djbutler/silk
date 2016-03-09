@@ -24,7 +24,7 @@
             <script src="../../js/loaders/ColladaLoader.js"></script>
             <script src="../../js/renderers/CanvasRenderer.js"></script>
             <script src="../../js/renderers/Projector.js"></script>
-            <script src="../../js/controls/TrackballControls.js"></script>
+            <script src="../../js/controls/OrbitControls.js"></script>
             <script src="../../js/Detector.js"></script>
             <script src="../../js/sketch.js"></script>
             <script src="../../js/libs/stats.min.js"></script>
@@ -170,7 +170,7 @@
                     document.body.appendChild( renderer2d.domElement );
                     renderer2d.domElement.style.pointerEvents = 'none';
 
-                    controls = new THREE.TrackballControls( camera, renderer.domElement );
+                    controls = new THREE.OrbitControls( camera, renderer.domElement );
 
                     stats = new Stats();
                     setupTween();
