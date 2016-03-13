@@ -38,7 +38,7 @@
                 var controls;
                 var sketch;
                 var particleLight;
-                var raycaster, mouse;
+                var raycaster, dragging_object;
 
                 var gripper_guides;
 
@@ -47,7 +47,9 @@
 
                 var kinematics;
 
-                var cursor = { x: -200, y: 200 };
+                var cursor = new THREE.Vector2( -200, -200 );
+                var cursor_normalized = new THREE.Vector2( -200, -200 );
+                var drag_point = new THREE.Vector2( -200, -200 );
                 var radius = 10;
                 var thickness = 10;
 
@@ -90,16 +92,43 @@
                         setup: init,
                         resize: onWindowResize,
                         draw: animate,
+                        mousedown: handleMouseDown,
+                        mouseup: handleMouseUp,
+                        touchstart: handleMouseDown,
+                        touchend: handleMouseUp, 
                         touchmove: function() {
                             // calculate mouse position in normalized device coordinates
                             // (-1 to +1) for both components
-                            mouse.x = ( this.touches[0].x / window.innerWidth ) * 2 - 1;
-                            mouse.y = - ( this.touches[0].y / window.innerHeight ) * 2 + 1;
+                            cursor_normalized.x = ( this.touches[0].x / window.innerWidth ) * 2 - 1;
+                            cursor_normalized.y = - ( this.touches[0].y / window.innerHeight ) * 2 + 1;
                             cursor.x = this.touches[0].x;
                             cursor.y = this.touches[0].y;
                         },
                         autopause: false
                     });
+                }
+
+                function handleMouseDown() {
+                    // update the picking ray with the camera and mouse position    
+                    raycaster.setFromCamera( cursor_normalized, camera );   
+                    // calculate objects intersecting the picking ray
+                    var intersects = raycaster.intersectObject( dae, true );
+                    if (intersects.length > 0) {
+                        drag_point = cursor.clone();
+                        dragging_object = true;
+                        controls.enabled = false;
+                        controls.enableRotate = false;
+                    } else {
+                        dragging_object = false;
+                        controls.enabled = true;
+                        controls.enableRotate = true;
+                    }
+                }
+
+                function handleMouseUp() {
+                    dragging_object = false;
+                    controls.enabled = true;
+                    controls.enableRotate = true;
                 }
 
                 function init() {
@@ -218,28 +247,24 @@
                 }
 
                 function render() {
-                    // update the picking ray with the camera and mouse position    
-                    raycaster.setFromCamera( mouse, camera );   
                     // update l_gripper_guide
                     updateGripperGuides();
-                    // calculate objects intersecting the picking ray
-                    var intersects = raycaster.intersectObject( dae, true );
+                    // clear canvas
                     ctx = renderer2d.domElement.getContext('2d');
                     ctx.clearRect(0, 0, renderer2d.domElement.width, renderer2d.domElement.height);
-                    if (intersects.length > 0) {
-                        controls.enabled = false;
+                    // update the camera controls
+                    controls.update();
+                    console.log('controls.enabled = ' + controls.enabled);
+                    // draw the dragging indicator
+                    if (dragging_object) {
                         // draw annulus around cursor
                         ctx.beginPath();
-                        ctx.arc( cursor.x, cursor.y, radius + thickness, 0, TWO_PI );
+                        ctx.arc( drag_point.x, drag_point.y, radius + thickness, 0, TWO_PI );
                         ctx.lineWidth = thickness;
                         ctx.globalAlpha = 0.5;
                         ctx.strokeStyle = '#CC6666';
                         ctx.stroke();
                     }
-                    else {
-                        controls.enabled = true;
-                    }
-                    controls.update();
                     renderer.render( scene, camera );
                 }
 
