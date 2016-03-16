@@ -144,12 +144,8 @@
                 function setupIK(point, link) {
                     // Set drag point
                     drag_point = point;
-                    solver.drag_point = [drag_point.x, drag_point.y, drag_point.z];
-
-                    // For visualizing the C++ reprojection function
-                    var point_tmp = solver.projectDragPoint(); 
-                    projected_point.x = point_tmp[0];
-                    projected_point.y = point_tmp[1];
+                    drag_point_local = link.worldToLocal(drag_point.clone());
+                    solver.drag_point = [drag_point_local.x, drag_point_local.y, drag_point_local.z];
 
                     // Set screen size
                     solver.setDims([renderer2d.domElement.width, renderer2d.domElement.height]);
@@ -171,7 +167,7 @@
                 function solveIK() {
                     solver.screen_point = [cursor.x, cursor.y];
                     solver.timeSolve(0.1);
-                    kinematics.setJointValue(findJointByName('l_shoulder_lift_link'), -solver.angle);
+                    kinematics.setJointValue(findJointByName('l_shoulder_lift_link'), solver.angle);
                 }
 
                 function setDragging(dragging) {
@@ -323,7 +319,7 @@
                         solveIK();
                         // draw annulus around cursor
                         ctx.beginPath();
-                        ctx.arc( projected_point.x, projected_point.y, radius + thickness, 0, TWO_PI );
+                        ctx.arc( cursor.x, cursor.y, radius + thickness, 0, TWO_PI );
                         ctx.lineWidth = thickness;
                         ctx.globalAlpha = 0.5;
                         ctx.strokeStyle = '#CC6666';
