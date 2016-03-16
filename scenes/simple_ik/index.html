@@ -27,6 +27,8 @@
             <script src="../../js/Detector.js"></script>
             <script src="../../js/sketch.js"></script>
             <script src="../../js/libs/stats.min.js"></script>
+            
+            <script src="solver.js"></script>
 
             <script>
 
@@ -40,6 +42,8 @@
                 var particleLight;
                 var raycaster, dragging_object;
 
+                var solver;
+
                 var gripper_guides;
 
                 var dae;
@@ -49,7 +53,8 @@
 
                 var cursor = new THREE.Vector2( -200, -200 );
                 var cursor_normalized = new THREE.Vector2( -200, -200 );
-                var drag_point = new THREE.Vector2( -200, -200 );
+                var drag_point = new THREE.Vector3( 0, 0, 0);
+                var projected_point = new THREE.Vector2( -200, -200 );
                 var radius = 10;
                 var thickness = 10;
 
@@ -82,6 +87,22 @@
 
                 renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
 
+                function cameraProject(point3d, width, height) {
+                    var point2d = point3d.project(camera);
+                    var p = new THREE.Vector2;
+                    p.x =  (point2d.x + 1) / 2 * width;
+                    p.y = -(point2d.y - 1) / 2 * height;
+                    return p;
+                }
+
+                function setCameraMatrix(solver, camera) {
+                    var a = new THREE.Matrix4;
+                    a.multiplyMatrices(camera.projectionMatrix, a.getInverse(camera.matrixWorld));
+                    for (var i = 0; i < 16; i++) {
+                        solver.setCameraMatrixEntry(i, a.elements[i]);
+                    }
+                }
+
                 function createSketch() {
                     sketch = Sketch.create({
                         type: Sketch.WEBGL,
@@ -108,13 +129,23 @@
                     });
                 }
 
+                function solveIK() {
+                    solver.drag_point = [drag_point.x, drag_point.y, drag_point.z];
+                    setCameraMatrix(solver, camera);
+                    solver.setDims([renderer2d.domElement.width, renderer2d.domElement.height]);
+                    var point_tmp = solver.projectDragPoint(); 
+                    projected_point.x = point_tmp[0];
+                    projected_point.y = point_tmp[1];
+                }
+
                 function handleMouseDown() {
                     // update the picking ray with the camera and mouse position    
                     raycaster.setFromCamera( cursor_normalized, camera );   
                     // calculate objects intersecting the picking ray
                     var intersects = raycaster.intersectObject( dae, true );
                     if (intersects.length > 0) {
-                        drag_point = cursor.clone();
+                        drag_point = intersects[0].point;
+                        solveIK();
                         dragging_object = true;
                         controls.enabled = false;
                         controls.enableRotate = false;
@@ -135,6 +166,7 @@
 
                     //container = document.createElement( 'div' );
                     //document.body.appendChild( container );
+                    solver = new Module.IKSolver;
 
                     raycaster = new THREE.Raycaster();
                     mouse = new THREE.Vector2();
@@ -258,7 +290,7 @@
                     if (dragging_object) {
                         // draw annulus around cursor
                         ctx.beginPath();
-                        ctx.arc( drag_point.x, drag_point.y, radius + thickness, 0, TWO_PI );
+                        ctx.arc( projected_point.x, projected_point.y, radius + thickness, 0, TWO_PI );
                         ctx.lineWidth = thickness;
                         ctx.globalAlpha = 0.5;
                         ctx.strokeStyle = '#CC6666';
