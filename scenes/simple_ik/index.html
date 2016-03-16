@@ -87,6 +87,14 @@
 
                 renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
 
+                function findJointByName(nodeName) { 
+                    for (var i = 0; i < 87; i++) {
+                        if (kinematics.jointMap[i].node.name == nodeName) {
+                            return i;
+                        }
+                    }
+                }
+                
                 function cameraProject(point3d, width, height) {
                     var point2d = point3d.project(camera);
                     var p = new THREE.Vector2;
@@ -95,11 +103,15 @@
                     return p;
                 }
 
-                function setCameraMatrix(solver, camera) {
-                    var a = new THREE.Matrix4;
-                    a.multiplyMatrices(camera.projectionMatrix, a.getInverse(camera.matrixWorld));
-                    for (var i = 0; i < 16; i++) {
-                        solver.setCameraMatrixEntry(i, a.elements[i]);
+                function transformToMatrix(transform) {
+                    var m1 = new THREE.Matrix4();
+                    switch ( transform.type ) {
+                        case 'matrix':
+                            return transform.obj;
+                        case 'translate':
+                            return m1.makeTranslation( transform.obj.x, transform.obj.y, transform.obj.z );
+                        case 'rotate':
+                            return m1.makeRotationAxis( transform.obj, transform.angle );
                     }
                 }
 
@@ -129,37 +141,61 @@
                     });
                 }
 
-                function solveIK() {
+                function setupIK(point, link) {
+                    // Set drag point
+                    drag_point = point;
                     solver.drag_point = [drag_point.x, drag_point.y, drag_point.z];
-                    setCameraMatrix(solver, camera);
-                    solver.setDims([renderer2d.domElement.width, renderer2d.domElement.height]);
+
+                    // For visualizing the C++ reprojection function
                     var point_tmp = solver.projectDragPoint(); 
                     projected_point.x = point_tmp[0];
                     projected_point.y = point_tmp[1];
+
+                    // Set screen size
+                    solver.setDims([renderer2d.domElement.width, renderer2d.domElement.height]);
+
+                    // Set camera matrix
+                    var a = new THREE.Matrix4;
+                    a.multiplyMatrices(camera.projectionMatrix, a.getInverse(camera.matrixWorld));
+                    solver.setCameraMatrix(a.elements);
+
+                    // Set static transforms
+                    var transforms = kinematics.jointMap[findJointByName("l_shoulder_lift_link")].transforms;
+                    var m01 = transformToMatrix(transforms[0]).multiply(transformToMatrix(transforms[1]));
+                    var m34 = transformToMatrix(transforms[3]).multiply(transformToMatrix(transforms[4]));
+                    solver.setLocalToJoint(m34.elements); 
+                    solver.setJointToParent(m01.elements);
+                    solver.setParentToWorld(link.parent.matrixWorld.elements);
+                }
+
+                function solveIK() {
+                    solver.screen_point = [cursor.x, cursor.y];
+                    solver.timeSolve(0.1);
+                    kinematics.setJointValue(findJointByName('l_shoulder_lift_link'), -solver.angle);
+                }
+
+                function setDragging(dragging) {
+                    dragging_object = dragging;
+                    controls.enabled = !dragging;
+                    controls.enableRotate = !dragging;
                 }
 
                 function handleMouseDown() {
                     // update the picking ray with the camera and mouse position    
                     raycaster.setFromCamera( cursor_normalized, camera );   
                     // calculate objects intersecting the picking ray
-                    var intersects = raycaster.intersectObject( dae, true );
+                    var link = dae.getObjectByName('l_shoulder_lift_link');
+                    var intersects = raycaster.intersectObject( link, true );
                     if (intersects.length > 0) {
-                        drag_point = intersects[0].point;
-                        solveIK();
-                        dragging_object = true;
-                        controls.enabled = false;
-                        controls.enableRotate = false;
+                        setupIK(intersects[0].point, link);
+                        setDragging(true);
                     } else {
-                        dragging_object = false;
-                        controls.enabled = true;
-                        controls.enableRotate = true;
+                        setDragging(false);
                     }
                 }
 
                 function handleMouseUp() {
-                    dragging_object = false;
-                    controls.enabled = true;
-                    controls.enableRotate = true;
+                    setDragging(false);
                 }
 
                 function init() {
@@ -199,9 +235,7 @@
                     // Add the COLLADA
                     THREE.Object3D.prototype.traverseDepth = function (a, i) {if(!1!==this.visible){a(this, i);for(var b=this.children,c=0,d=b.length;c<d;c++)b[c].traverseDepth(a,i+1)}};
                     dae.traverseDepth(function(obj, i) { if (obj.material) { obj.material.color.setHex(0x999999) ; } }, 0);
-                    // dae.traverseDepth(function(obj, i) { if (obj.material) { obj.material.color.setHSL(i/17, 0.25, 0.4); } }, 0);
-                    // dae.traverseDepth(function(obj, i) { if (obj.material) { obj.material.color.setHex(10170980) ; } }, 0);
-                    // dae.traverseDepth(function(obj, i) { if (obj.material) { obj.material.color.setHex(0x66cc99 * i) ; } }, 0);
+                    dae.getObjectByName('l_shoulder_lift_link').traverseDepth(function(obj, i) { if (obj.material) { obj.material.color.setHex(0x669966) ; } }, 0);
                     scene.add( dae );
 
                     // Gripper guides
@@ -257,8 +291,6 @@
 
                 }
 
-                //
-
                 function animate() {
                     render();
                     stats.update();
@@ -288,6 +320,7 @@
                     controls.update();
                     // draw the dragging indicator
                     if (dragging_object) {
+                        solveIK();
                         // draw annulus around cursor
                         ctx.beginPath();
                         ctx.arc( projected_point.x, projected_point.y, radius + thickness, 0, TWO_PI );
