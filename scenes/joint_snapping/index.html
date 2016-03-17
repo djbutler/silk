@@ -50,6 +50,7 @@
 
                 var dae;
                 var collada;
+                var target_object;
 
                 var kinematics;
 
@@ -169,6 +170,13 @@
                     solver.setParentToWorld(link.parent.matrixWorld.elements);
                 }
 
+                function getLeftArmGroundPoint() {
+                    var ground_plane = new THREE.Plane(new THREE.Vector3(0,-1,0), 0);
+                    var line = new THREE.Line3(snap_guide.localToWorld(snap_guide.geometry.vertices[0].clone()),
+                                               snap_guide.localToWorld(snap_guide.geometry.vertices[1].clone()));
+                    return ground_plane.intersectLine(line);
+                }
+
                 function setJoint(link_name, angle) {
                     var TOLERANCE = 5;
                     var TARGET_ANGLE = 40;
@@ -279,6 +287,13 @@
                     drag_point_visual = new THREE.Mesh( geometry, material );
                     drag_point_visual.visible = false;
                     link.add(drag_point_visual);
+
+                    // 
+                    var material = new THREE.MeshPhongMaterial( { color: 0x666666 } );
+                    var geometry = new THREE.SphereGeometry(0.5); 
+                    target_object = new THREE.Mesh( geometry, material );
+                    scene.add(target_object);
+                    target_object.position.set(9.9229, 0, -2.0295);
 
                     // Lights
                     particleLight = new THREE.Mesh( new THREE.SphereGeometry( 4, 8, 8 ), new THREE.MeshBasicMaterial( { color: 0xffffff } ) );
