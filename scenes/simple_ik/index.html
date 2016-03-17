@@ -11,7 +11,7 @@
 
             <div class="blurb">
                 <div class="title">Simple IK</div>
-                <div class="description">Rotate the PR2 to keep a dragged point under the cursor.</div>
+                <div class="description">Rotate the PR2 shoulder by dragging.</div>
             </div>
 
             <div class="navigation">
@@ -45,6 +45,7 @@
                 var solver;
 
                 var gripper_guides;
+                var drag_point_visual;
 
                 var dae;
                 var collada;
@@ -144,8 +145,11 @@
                 function setupIK(point, link) {
                     // Set drag point
                     drag_point = point;
-                    drag_point_local = link.worldToLocal(drag_point.clone());
+                    var drag_point_local = link.worldToLocal(drag_point.clone());
                     solver.drag_point = [drag_point_local.x, drag_point_local.y, drag_point_local.z];
+                    
+                    // Visualize the drag point
+                    drag_point_visual.position.set(drag_point_local.x, drag_point_local.y, drag_point_local.z);
 
                     // Set screen size
                     solver.setDims([renderer2d.domElement.width, renderer2d.domElement.height]);
@@ -172,6 +176,7 @@
 
                 function setDragging(dragging) {
                     dragging_object = dragging;
+                    drag_point_visual.visible = dragging;
                     controls.enabled = !dragging;
                     controls.enableRotate = !dragging;
                 }
@@ -209,7 +214,6 @@
                     scene = new THREE.Scene();
 
                     // Grid
-
                     var size = 14, step = 1;
 
                     var geometry = new THREE.Geometry();
@@ -245,8 +249,15 @@
                         scene.add(gripper_guides[i]);
                     }
 
-                    // Lights
+                    // Drag point visual
+                    var link = dae.getObjectByName('l_shoulder_lift_link');
+                    var material = new THREE.MeshBasicMaterial( { color: 0x000000 } );
+                    var geometry = new THREE.SphereGeometry(0.01); 
+                    drag_point_visual = new THREE.Mesh( geometry, material );
+                    drag_point_visual.visible = false;
+                    link.add(drag_point_visual);
 
+                    // Lights
                     particleLight = new THREE.Mesh( new THREE.SphereGeometry( 4, 8, 8 ), new THREE.MeshBasicMaterial( { color: 0xffffff } ) );
                     particleLight.position.set(-2611.7403539515544, -3454.272981693232, -1494.286894656113);
                     scene.add( particleLight );
