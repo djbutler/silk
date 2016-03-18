@@ -1,5 +1,5 @@
 # Silk
-***
+
 Silk is a collection of robotic UI experiments. Check out the [live gallery](http://djbutler.github.io/silk/).
 
 To make deployment to GitHub pages easier, all the code lives in the `gh-pages` branch.
