@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Silk - Simple IK</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <link rel="stylesheet" type="text/css" href="../../css/silk.css">
+    </head>
+    <body style="background-color: #cccccc; overflow: hidden">
+        <div class="column">
+
+            <div class="blurb">
+                <div class="title">Full IK</div>
+                <div class="description">Move the full PR2 arm by dragging.</div>
+            </div>
+
+            <div class="navigation">
+                <a href="../../">Top</a> / <a href="../../about.html">About</a>
+            </div>
+
+            <script src="http://cdnjs.cloudflare.com/ajax/libs/three.js/r73/three.min.js"></script>
+
+            <script src="../../js/loaders/ColladaLoader.js"></script>
+            <script src="../../js/renderers/CanvasRenderer.js"></script>
+            <script src="../../js/renderers/Projector.js"></script>
+            <script src="../../js/controls/OrbitControls.js"></script>
+            <script src="../../js/Detector.js"></script>
+            <script src="../../js/sketch.js"></script>
+            <script src="../../js/libs/stats.min.js"></script>
+            
+            <script src="solver.js"></script>
+
+            <script>
+
+                if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+                var container, stats;
+
+                var camera, scene, renderer, renderer2d, objects;
+                var controls;
+                var sketch;
+                var particleLight;
+                var raycaster, dragging_object;
+
+                var solver;
+
+                var gripper_guides;
+                var drag_point_visual;
+
+                var dae;
+                var collada;
+
+                var kinematics;
+
+                var cursor = new THREE.Vector2( -200, -200 );
+                var cursor_normalized = new THREE.Vector2( -200, -200 );
+                var drag_point = new THREE.Vector3( 0, 0, 0);
+                var projected_point = new THREE.Vector2( -200, -200 );
+                var radius = 10;
+                var thickness = 10;
+
+                var loader = new THREE.ColladaLoader();
+                loader.options.convertUpAxis = true;
+                loader.load( '../../models/pr2/collada/openrave-pr2.dae', function ( collada_ ) {
+
+                    collada = collada_;
+                    dae = collada.scene;
+
+                    dae.traverse( function ( child ) {
+
+                        if ( child instanceof THREE.Mesh ) {
+
+                            child.geometry.computeFaceNormals();
+                            child.material.shading = THREE.FlatShading;
+
+                        }
+
+                    } );
+
+                    dae.scale.x = dae.scale.y = dae.scale.z = 10.0;
+                    dae.updateMatrix();
+
+                    kinematics = collada.kinematics;
+
+                    createSketch();
+
+                } );
+
+                renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
+
+                function findJointByName(nodeName) { 
+                    for (var i = 0; i < 87; i++) {
+                        if (kinematics.jointMap[i].node.name == nodeName) {
+                            return i;
+                        }
+                    }
+                }
+                
+                function cameraProject(point3d, width, height) {
+                    var point2d = point3d.project(camera);
+                    var p = new THREE.Vector2;
+                    p.x =  (point2d.x + 1) / 2 * width;
+                    p.y = -(point2d.y - 1) / 2 * height;
+                    return p;
+                }
+
+                function transformToMatrix(transform) {
+                    var m1 = new THREE.Matrix4();
+                    switch ( transform.type ) {
+                        case 'matrix':
+                            return transform.obj;
+                        case 'translate':
+                            return m1.makeTranslation( transform.obj.x, transform.obj.y, transform.obj.z );
+                        case 'rotate':
+                            return m1.makeRotationAxis( transform.obj, transform.angle );
+                    }
+                }
+
+                function createSketch() {
+                    sketch = Sketch.create({
+                        type: Sketch.WEBGL,
+                        // Use existing element
+                        element: renderer.domElement,
+                        // Use existing context
+                        context: renderer.context,
+                        setup: init,
+                        resize: onWindowResize,
+                        draw: animate,
+                        mousedown: handleMouseDown,
+                        mouseup: handleMouseUp,
+                        touchstart: handleMouseDown,
+                        touchend: handleMouseUp, 
+                        touchmove: function() {
+                            // calculate mouse position in normalized device coordinates
+                            // (-1 to +1) for both components
+                            cursor_normalized.x = ( this.touches[0].x / window.innerWidth ) * 2 - 1;
+                            cursor_normalized.y = - ( this.touches[0].y / window.innerHeight ) * 2 + 1;
+                            cursor.x = this.touches[0].x;
+                            cursor.y = this.touches[0].y;
+                        },
+                        autopause: false
+                    });
+                }
+
+                function setupIK(point, link) {
+                    // Set drag point
+                    drag_point = point;
+                    var drag_point_local = link.worldToLocal(drag_point.clone());
+                    solver.drag_point = [drag_point_local.x, drag_point_local.y, drag_point_local.z];
+                    
+                    // Visualize the drag point
+                    drag_point_visual.position.set(drag_point_local.x, drag_point_local.y, drag_point_local.z);
+
+                    // Set screen size
+                    solver.setDims([renderer2d.domElement.width, renderer2d.domElement.height]);
+
+                    // Set camera matrix
+                    var a = new THREE.Matrix4;
+                    a.multiplyMatrices(camera.projectionMatrix, a.getInverse(camera.matrixWorld));
+                    solver.setCameraMatrix(a.elements);
+
+                    // Set static transforms
+                    var transforms = kinematics.jointMap[findJointByName("l_shoulder_lift_link")].transforms;
+                    var m01 = transformToMatrix(transforms[0]).multiply(transformToMatrix(transforms[1]));
+                    var m34 = transformToMatrix(transforms[3]).multiply(transformToMatrix(transforms[4]));
+                    solver.setLocalToJoint(m34.elements); 
+                    solver.setJointToParent(m01.elements);
+                    solver.setParentToWorld(link.parent.matrixWorld.elements);
+                }
+
+                function solveIK() {
+                    solver.screen_point = [cursor.x, cursor.y];
+                    solver.timeSolve(0.1);
+                    kinematics.setJointValue(findJointByName('l_shoulder_lift_link'), solver.angle);
+                }
+
+                function setDragging(dragging) {
+                    dragging_object = dragging;
+                    drag_point_visual.visible = dragging;
+                    controls.enabled = !dragging;
+                    controls.enableRotate = !dragging;
+                }
+
+                function handleMouseDown() {
+                    // update the picking ray with the camera and mouse position    
+                    raycaster.setFromCamera( cursor_normalized, camera );   
+                    // calculate objects intersecting the picking ray
+                    var link = dae.getObjectByName('l_shoulder_lift_link');
+                    var intersects = raycaster.intersectObject( link, true );
+                    if (intersects.length > 0) {
+                        setupIK(intersects[0].point, link);
+                        setDragging(true);
+                    } else {
+                        setDragging(false);
+                    }
+                }
+
+                function handleMouseUp() {
+                    setDragging(false);
+                }
+
+                function init() {
+
+                    //container = document.createElement( 'div' );
+                    //document.body.appendChild( container );
+                    solver = new Module.IKSolver;
+
+                    raycaster = new THREE.Raycaster();
+                    mouse = new THREE.Vector2();
+
+                    camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 2000 );
+                    camera.position.set( 33.2473216212127, 22.57002219279167, -19.15198843903227); 
+
+                    scene = new THREE.Scene();
+
+                    // Grid
+                    var size = 14, step = 1;
+
+                    var geometry = new THREE.Geometry();
+                    var material = new THREE.LineBasicMaterial( { color: 0x999999 } );
+
+                    for ( var i = - size; i <= size; i += step ) {
+
+                        geometry.vertices.push( new THREE.Vector3( - size, - 0.04, i ) );
+                        geometry.vertices.push( new THREE.Vector3(   size, - 0.04, i ) );
+
+                        geometry.vertices.push( new THREE.Vector3( i, - 0.04, - size ) );
+                        geometry.vertices.push( new THREE.Vector3( i, - 0.04,   size ) );
+
+                    }
+
+                    var line = new THREE.LineSegments( geometry, material );
+                    scene.add( line );
+
+                    // Add the COLLADA
+                    THREE.Object3D.prototype.traverseDepth = function (a, i) {if(!1!==this.visible){a(this, i);for(var b=this.children,c=0,d=b.length;c<d;c++)b[c].traverseDepth(a,i+1)}};
+                    dae.traverseDepth(function(obj, i) { if (obj.material) { obj.material.color.setHex(0x999999) ; } }, 0);
+                    dae.getObjectByName('l_shoulder_lift_link').traverseDepth(function(obj, i) { if (obj.material) { obj.material.color.setHex(0x669966) ; } }, 0);
+                    scene.add( dae );
+
+                    // Gripper guides
+                    var material = new THREE.LineBasicMaterial( { color: 0xff3333, linewidth: 1 } );
+                    gripper_guides = [];
+                    for (var i = 0; i < 2; i++) {
+                        var geometry = new THREE.Geometry();
+                        geometry.vertices.push(new THREE.Vector3);
+                        geometry.vertices.push(new THREE.Vector3);
+                        gripper_guides.push(new THREE.Line(geometry, material));
+                        scene.add(gripper_guides[i]);
+                    }
+
+                    // Drag point visual
+                    var link = dae.getObjectByName('l_shoulder_lift_link');
+                    var material = new THREE.MeshBasicMaterial( { color: 0x000000 } );
+                    var geometry = new THREE.SphereGeometry(0.01); 
+                    drag_point_visual = new THREE.Mesh( geometry, material );
+                    drag_point_visual.visible = false;
+                    link.add(drag_point_visual);
+
+                    // Lights
+                    particleLight = new THREE.Mesh( new THREE.SphereGeometry( 4, 8, 8 ), new THREE.MeshBasicMaterial( { color: 0xffffff } ) );
+                    particleLight.position.set(-2611.7403539515544, -3454.272981693232, -1494.286894656113);
+                    scene.add( particleLight );
+
+                    var light = new THREE.HemisphereLight( 0x333333, 0xffeeee );
+                    scene.add( light );
+
+                    var pointLight = new THREE.PointLight( 0xffffff, 0.3 );
+                    particleLight.add( pointLight );
+
+                    renderer.setClearColor( 0x000000, 0 );
+                    renderer.setPixelRatio( window.devicePixelRatio );
+                    renderer.setSize( window.innerWidth, window.innerHeight );
+                    //container.appendChild( renderer.domElement );
+
+                    renderer2d = new THREE.CanvasRenderer({antialias: true, alpha: true});
+                    renderer2d.setClearColor( 0x000000, 0 );
+                    renderer2d.setSize( window.innerWidth, window.innerHeight );
+                    document.body.appendChild( renderer2d.domElement );
+                    renderer2d.domElement.style.pointerEvents = 'none';
+
+                    controls = new THREE.OrbitControls( camera, renderer.domElement );
+
+                    stats = new Stats();
+                    stats.domElement.style.position = 'absolute';
+                    stats.domElement.style.top = '0px';
+                    //container.appendChild( stats.domElement );
+
+                }
+
+                function onWindowResize() {
+
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+
+                    renderer.setSize( window.innerWidth, window.innerHeight );
+                    renderer2d.setSize( window.innerWidth, window.innerHeight );
+
+                }
+
+                function animate() {
+                    render();
+                    stats.update();
+                }
+
+                function updateGripperGuides() {
+                    var initials = ['l','r'];
+                    for (var i = 0; i < 2; i++) {
+                        gripper_guide = gripper_guides[i];
+                        gripper_guide.geometry.vertices[0].addVectors( dae.getObjectByName(initials[i] + "_gripper_l_finger_tip_link").getWorldPosition(),
+                                                                       dae.getObjectByName(initials[i] + "_gripper_r_finger_tip_link").getWorldPosition() );
+                        gripper_guide.geometry.vertices[0].divideScalar(2.0);
+                        // l_gripper_guide.geometry.vertices[0].y -= 0.6;
+                        gripper_guide.geometry.vertices[1] = gripper_guide.geometry.vertices[0].clone();
+                        gripper_guide.geometry.vertices[1].y = 0;
+                        gripper_guide.geometry.verticesNeedUpdate = true;
+                    }
+                }
+
+                function render() {
+                    // update l_gripper_guide
+                    updateGripperGuides();
+                    // clear canvas
+                    ctx = renderer2d.domElement.getContext('2d');
+                    ctx.clearRect(0, 0, renderer2d.domElement.width, renderer2d.domElement.height);
+                    // update the camera controls
+                    controls.update();
+                    // draw the dragging indicator
+                    if (dragging_object) {
+                        solveIK();
+                        // draw annulus around cursor
+                        ctx.beginPath();
+                        ctx.arc( cursor.x, cursor.y, radius + thickness, 0, TWO_PI );
+                        ctx.lineWidth = thickness;
+                        ctx.globalAlpha = 0.5;
+                        ctx.strokeStyle = '#CC6666';
+                        ctx.stroke();
+                    }
+                    renderer.render( scene, camera );
+                }
+
+                // Returns a random integer between min (inclusive) and max (inclusive)
+                // Using Math.round() will give you a non-uniform distribution!
+
+                function getRandomInt( min, max ) {
+
+                    return Math.floor( Math.random() * ( max - min + 1 ) ) + min;
+
+                }
+
+            </script>
+
+        </div>
+    </body>
+</html>
