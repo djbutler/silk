@@ -142,7 +142,25 @@
                     });
                 }
 
-                function setupIK(point, link) {
+                N_JOINTS = 1;
+                function initIK(link) {
+                    if (solver.getNumTransforms() == 0) {
+                        for (var i = 0; i < N_JOINTS; i++) {
+                            // Set static transforms
+                            var transforms = kinematics.jointMap[15 + N_JOINTS - i].transforms;
+                            var m01 = transformToMatrix(transforms[0]).multiply(transformToMatrix(transforms[1]));
+                            var m34 = transformToMatrix(transforms[3]).multiply(transformToMatrix(transforms[4]));
+                            solver.addStaticTransform(m34.elements); 
+                            solver.addJointTransform();
+                            solver.addStaticTransform(m01.elements);
+                        }
+                        // l_shoulder_lift_link to world
+                        solver.addStaticTransform(link.parent.matrixWorld.elements);
+                    }
+                }
+
+                function updateIK(point, link) {
+                    initIK(link);
                     // Set drag point
                     drag_point = point;
                     var drag_point_local = link.worldToLocal(drag_point.clone());
@@ -158,20 +176,14 @@
                     var a = new THREE.Matrix4;
                     a.multiplyMatrices(camera.projectionMatrix, a.getInverse(camera.matrixWorld));
                     solver.setCameraMatrix(a.elements);
-
-                    // Set static transforms
-                    var transforms = kinematics.jointMap[findJointByName("l_shoulder_lift_link")].transforms;
-                    var m01 = transformToMatrix(transforms[0]).multiply(transformToMatrix(transforms[1]));
-                    var m34 = transformToMatrix(transforms[3]).multiply(transformToMatrix(transforms[4]));
-                    solver.setLocalToJoint(m34.elements); 
-                    solver.setJointToParent(m01.elements);
-                    solver.setParentToWorld(link.parent.matrixWorld.elements);
                 }
 
                 function solveIK() {
                     solver.screen_point = [cursor.x, cursor.y];
                     solver.timeSolve(0.1);
-                    kinematics.setJointValue(findJointByName('l_shoulder_lift_link'), solver.angle);
+                    for (var i = 0; i < N_JOINTS; i++) {
+                        kinematics.setJointValue(15 + N_JOINTS - i, solver.getJointValue(i));
+                    }
                 }
 
                 function setDragging(dragging) {
@@ -188,7 +200,7 @@
                     var link = dae.getObjectByName('l_shoulder_lift_link');
                     var intersects = raycaster.intersectObject( link, true );
                     if (intersects.length > 0) {
-                        setupIK(intersects[0].point, link);
+                        updateIK(intersects[0].point, link);
                         setDragging(true);
                     } else {
                         setDragging(false);
@@ -203,6 +215,7 @@
 
                     //container = document.createElement( 'div' );
                     //document.body.appendChild( container );
+
                     solver = new Module.IKSolver;
 
                     raycaster = new THREE.Raycaster();
@@ -280,6 +293,9 @@
                     renderer2d.domElement.style.pointerEvents = 'none';
 
                     controls = new THREE.OrbitControls( camera, renderer.domElement );
+
+                    // turns out you need to wait a cycle until matrixWorld is updated
+                    // initIK(dae.getObjectByName('l_shoulder_lift_link'));
 
                     stats = new Stats();
                     stats.domElement.style.position = 'absolute';

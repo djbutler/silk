@@ -2,12 +2,16 @@
 //
 #include <stdio.h>
 #include <sstream>
+
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 
 #include "ceres/ceres.h"
 #include "ceres/rotation.h"
 #include "glog/logging.h"
+
+#include "silk/matrices.h"
+#include "silk/transforms.h"
 
 #ifdef EMSCRIPTEN
 
@@ -27,113 +31,13 @@ using ceres::Solve;
 using namespace std;
 
 
-struct Mat4 {
-  double a0,  a1,   a2,  a3,
-         a4,  a5,   a6,  a7,
-         a8,  a9,  a10, a11,
-         a12, a13, a14, a15;
-};
-
-
-template<typename T>
-inline void matToEigen(const Mat4& m, Eigen::Matrix<T,4,4>& m_out) {
-    m_out << T(m.a0),  T(m.a4),  T(m.a8),  T(m.a12),
-             T(m.a1),  T(m.a5),  T(m.a9),  T(m.a13),
-             T(m.a2),  T(m.a6),  T(m.a10), T(m.a14),
-             T(m.a3),  T(m.a7),  T(m.a11), T(m.a15);
-} 
-
-
-struct Point2D {
-  double x, y;
-  Point2D() {}
-  Point2D(double x_, double y_) : x(x_), y(y_) {}
-};
-
-
-struct Point3D {
-  double x, y, z;
-  Point3D() {}
-  Point3D(double x_, double y_, double z_) : x(x_), y(y_), z(z_) {}
-};
-
-
-class Transform {
-private:
-    virtual void _() {}
-public:
-    template<typename T> void apply( const T* const robot_state,
-                                     const Eigen::Matrix<T,4,1> v_in,
-                                     Eigen::Matrix<T,4,1> &v_out );
-};
-
-
-class StaticTransform : public Transform {
-private:
-    Mat4 mat_;
-public:
-    StaticTransform(const Mat4 &mat) : mat_(mat) {}
-    template<typename T> void apply( const T* const robot_state,
-                                     const Eigen::Matrix<T,4,1> v_in,
-                                     Eigen::Matrix<T,4,1> &v_out ) {
-        Eigen::Matrix<T,4,4> mat_tmp;
-        matToEigen(mat_, mat_tmp);
-        v_out = mat_tmp * v_in;
-    }
-};
-
-
-class JointTransform : public Transform {
-private:
-    int joint_idx_;
-public:
-    JointTransform(int joint_idx) : joint_idx_(joint_idx) {}
-
-    template<typename T> void apply( const T* const robot_state,
-                                     const Eigen::Matrix<T,4,1> v_in,
-                                     Eigen::Matrix<T,4,1> &v_out ) {
-        // apply joint rotation
-        // URDF -> OpenRave Collada -> Three.js always results in joint axis = [0, 1, 0]
-        T angle_axis[3];
-        angle_axis[0] = T(0.0);
-        angle_axis[1] = T(robot_state[joint_idx_]) * T(M_PI / 180.0);  // deg to rad
-        angle_axis[2] = T(0.0);
-        // convert
-        T v_in_raw[3];
-        v_in_raw[0] = v_in(0) / v_in(3);
-        v_in_raw[1] = v_in(1) / v_in(3);
-        v_in_raw[2] = v_in(2) / v_in(3);
-        // apply rotation
-        T v_out_raw[3];
-        ceres::AngleAxisRotatePoint<T>(angle_axis, v_in_raw, v_out_raw);
-        // convert
-        v_out(0) = v_out_raw[0];
-        v_out(1) = v_out_raw[1];
-        v_out(2) = v_out_raw[2];
-        v_out(3) = T(1.0);
-    }
-};
-
-
-template<typename T> void Transform::apply( const T* const robot_state,
-                                            const Eigen::Matrix<T,4,1> v_in,
-                                            Eigen::Matrix<T,4,1> &v_out ) {
-    if (StaticTransform* trans = dynamic_cast<StaticTransform*>(this)) {
-        trans->apply(robot_state, v_in, v_out);
-    }
-    else if (JointTransform* trans = dynamic_cast<JointTransform*>(this)) {
-        trans->apply(robot_state, v_in, v_out);
-    }
-}
-
-
 class IKSolver {
   
 public:
   
   double width_;
   double height_;
-  double angle_;
+  double robot_state_[7];
   double screen_x_;
   double screen_y_;
   double drag_x_;
@@ -142,10 +46,10 @@ public:
   // NOTE: camera matrix is composed of camera extrinsic and intrinsic matrices
   Mat4 cameraMatrix_;
   vector<boost::shared_ptr<Transform> > transforms;
-  int num_joints;
   Problem problem_; 
+  int num_joints_;
   
-  IKSolver() : num_joints(0), angle_(0.0), screen_x_(0.0), screen_y_(0.0), drag_x_(0.0), drag_y_(0.0), drag_z_(0.0) {
+  IKSolver() : num_joints_(0), screen_x_(0.0), screen_y_(0.0), drag_x_(0.0), drag_y_(0.0), drag_z_(0.0) {
     buildProblem();
   }
   
@@ -153,15 +57,18 @@ public:
   // ugly, but lets me avoid separate class declaration and definition, which would slow me down
   void buildProblem();
 
-  void setCameraMatrix(Mat4 m)  { cameraMatrix_ = m; }
+  int getNumTransforms() { return transforms.size(); }
 
-  void addStaticTransform(const Mat4 m) {
-    transforms.push_back(boost::make_shared<StaticTransform>(m));
-  }
+  double getJointValue(int idx) { return robot_state_[idx]; } 
 
   void addJointTransform() {
-    transforms.push_back(boost::make_shared<JointTransform>(num_joints++));
+      cout << "Adding joint transform number " << num_joints_ << endl;
+      transforms.push_back(boost::make_shared<JointTransform>(num_joints_++));
   }
+  void addStaticTransform(Mat4 m)  {
+      transforms.push_back(boost::make_shared<StaticTransform>(m));
+  }
+  void setCameraMatrix(Mat4 m)  { cameraMatrix_ = m; }
   
   Point2D projectDragPoint() {
     Eigen::Matrix<double,4,1> drag_point(drag_x_, drag_y_, drag_z_, 1.0);
@@ -190,8 +97,8 @@ public:
     height_ = dims.y;
   }
 
-  double getAngle() const { return angle_; }
-  void setAngle(double angle) { angle_ = angle; }
+  double getAngle() const { return robot_state_[0]; }
+  void setAngle(double angle) { robot_state_[0] = angle; }
   
   Point2D getScreenPoint() const { return Point2D(screen_x_, screen_y_); }
   void setScreenPoint(Point2D screen_point) { screen_x_ = screen_point.x;
@@ -229,17 +136,21 @@ struct CostFunctor {
 
   IKSolver* solver_;
 
-  CostFunctor( IKSolver* solver )
+  CostFunctor(IKSolver* solver)
       : solver_(solver) {}
 
-  template <typename T> bool operator()(const T* const robot_state, T* residual) const {
+  template <typename T> bool operator()(const T* const angle, T* residual) const {
     // Objective function: residual = Rx - s
-    Eigen::Matrix<T,4,1> v(T(solver_->drag_x_), T(solver_->drag_y_), T(solver_->drag_z_), T(1.0));
 
-    // apply transforms in reverse order
+    Eigen::Matrix<T,4,1> v(T(solver_->drag_x_), T(solver_->drag_y_), T(solver_->drag_z_), T(1.0));
     Eigen::Matrix<T,4,1> v_tmp;
-    for (int i = solver_->transforms.size() - 1; i >= 0; --i) {
-        solver_->transforms[i]->apply(robot_state, v, v_tmp);
+
+    T* state;
+    T tmp = T(*angle);
+    state = &tmp;
+
+    for (int i = 0; i < solver_->transforms.size(); ++i) {
+        solver_->transforms[i]->apply( state, v, v_tmp );
         v = v_tmp;
     }
 
@@ -258,8 +169,8 @@ struct CostFunctor {
 
 void IKSolver::buildProblem() {
     CostFunction* cost_function =
-        new AutoDiffCostFunction<CostFunctor, 2, 1>(new CostFunctor(this));
-    problem_.AddResidualBlock(cost_function, NULL, &angle_);
+        new AutoDiffCostFunction<CostFunctor, 2, 7>(new CostFunctor(this));
+    problem_.AddResidualBlock(cost_function, NULL, robot_state_);
 }
 
 /*
@@ -321,10 +232,11 @@ EMSCRIPTEN_BINDINGS() {
         .function("stepSolve", &IKSolver::stepSolve)
         .function("timeSolve", &IKSolver::timeSolve)
         .function("setDims", &IKSolver::setDims)
+        .function("getNumTransforms", &IKSolver::getNumTransforms)
+        .function("getJointValue", &IKSolver::getJointValue)
+        .function("addJointTransform", &IKSolver::addJointTransform)
+        .function("addStaticTransform", &IKSolver::addStaticTransform)
         .function("setCameraMatrix", &IKSolver::setCameraMatrix)
-        .function("setLocalToJoint", &IKSolver::setLocalToJoint)
-        .function("setJointToParent", &IKSolver::setJointToParent)
-        .function("setParentToWorld", &IKSolver::setParentToWorld)
         .function("projectDragPoint", &IKSolver::projectDragPoint)
         .property("screen_point", &IKSolver::getScreenPoint, &IKSolver::setScreenPoint)
         .property("drag_point", &IKSolver::getDragPoint, &IKSolver::setDragPoint)
