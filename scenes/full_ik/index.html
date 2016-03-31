@@ -106,22 +106,6 @@
                     return p;
                 }
 
-                function localToWorldKinematics(point, link) {
-                    if (solver.getNumTransforms() == 0) {
-                        for (var i = 0; i < N_JOINTS; i++) {
-                            // Set static transforms
-                            var transforms = kinematics.jointMap[15 + N_JOINTS - i].transforms;
-                            var m01 = transformToMatrix(transforms[0]).multiply(transformToMatrix(transforms[1]));
-                            var m34 = transformToMatrix(transforms[3]).multiply(transformToMatrix(transforms[4]));
-                            solver.addStaticTransform(m34.elements); 
-                            solver.addJointTransform();
-                            solver.addStaticTransform(m01.elements);
-                        }
-                        // l_shoulder_lift_link to world
-                        solver.addStaticTransform(link.parent.matrixWorld.elements);
-                    }
-                }
-
                 function localToWorldSceneGraph(point, link) {
                     var drag_point_local = link.worldToLocal(point);
                     var current_link = link;
@@ -183,7 +167,7 @@
                     });
                 }
 
-                N_JOINTS = 3;
+                N_JOINTS = 4;
                 function initSolverSceneGraph(link, arm) {
                     // Called once when the DAE is finished loading
                     //   this function is idempotent - running it twice does nothing.
@@ -221,7 +205,10 @@
                                 var m01 = transformToMatrix(transforms[0]).multiply(transformToMatrix(transforms[1]));
                                 var m34 = transformToMatrix(transforms[3]).multiply(transformToMatrix(transforms[4]));
                                 solver.addStaticTransform(m01.elements);
-                                solver.addJointTransform();
+                                console.log('kinematics.jointMap[putative_joint].joint.limits.min = ' + kinematics.jointMap[putative_joint].joint.limits.min);
+                                console.log('kinematics.jointMap[putative_joint].joint.limits.max= ' + kinematics.jointMap[putative_joint].joint.limits.max);
+                                solver.addJointTransform(kinematics.jointMap[putative_joint].joint.limits.min,
+                                                         kinematics.jointMap[putative_joint].joint.limits.max);
                                 solver.addStaticTransform(m34.elements); 
                                 linkToIndex[links[i].name] = solver.getNumTransforms() - 1;
                                 num_joints++;

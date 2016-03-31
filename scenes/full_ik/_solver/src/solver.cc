@@ -62,8 +62,10 @@ public:
 
   double getJointValue(int idx) { return robot_state_[idx]; } 
 
-  void addJointTransform() {
+  void addJointTransform(double lower_bound, double upper_bound) {
       cout << "Adding joint transform number " << num_joints_ << endl;
+      problem_.SetParameterLowerBound(robot_state_, num_joints_, lower_bound);
+      problem_.SetParameterUpperBound(robot_state_, num_joints_, upper_bound);
       transforms.push_back(boost::make_shared<JointTransform>(num_joints_++));
   }
   void addStaticTransform(Mat4 m)  {
@@ -114,7 +116,8 @@ public:
     Solver::Options options;
     options.max_num_iterations = step_limit;
     options.logging_type = ceres::SILENT;
-    options.minimizer_type = ceres::LINE_SEARCH;
+    options.linear_solver_type = ceres::DENSE_QR;
+    //options.minimizer_type = ceres::LINE_SEARCH;
     Solver::Summary summary;
     Solve(options, &problem_, &summary);
     cout << summary.FullReport() << "\n";
@@ -125,7 +128,8 @@ public:
     Solver::Options options;
     options.max_solver_time_in_seconds = time_limit;
     options.logging_type = ceres::SILENT;
-    options.minimizer_type = ceres::LINE_SEARCH;
+    options.linear_solver_type = ceres::DENSE_QR;
+    //options.minimizer_type = ceres::LINE_SEARCH;
     Solver::Summary summary;
     Solve(options, &problem_, &summary);
   }
