@@ -48,8 +48,9 @@ public:
   vector<boost::shared_ptr<Transform> > transforms;
   Problem problem_; 
   int num_joints_;
+  int start_transform_index_;
   
-  IKSolver() : num_joints_(0), screen_x_(0.0), screen_y_(0.0), drag_x_(0.0), drag_y_(0.0), drag_z_(0.0) {
+  IKSolver() : start_transform_index_(0), num_joints_(0), screen_x_(0.0), screen_y_(0.0), drag_x_(0.0), drag_y_(0.0), drag_z_(0.0) {
     buildProblem();
   }
   
@@ -69,6 +70,8 @@ public:
       transforms.push_back(boost::make_shared<StaticTransform>(m));
   }
   void setCameraMatrix(Mat4 m)  { cameraMatrix_ = m; }
+
+  void setStartTransformIndex(int idx) { start_transform_index_ = idx; }
   
   Point2D projectDragPoint() {
     Eigen::Matrix<double,4,1> drag_point(drag_x_, drag_y_, drag_z_, 1.0);
@@ -97,9 +100,6 @@ public:
     height_ = dims.y;
   }
 
-  double getAngle() const { return robot_state_[0]; }
-  void setAngle(double angle) { robot_state_[0] = angle; }
-  
   Point2D getScreenPoint() const { return Point2D(screen_x_, screen_y_); }
   void setScreenPoint(Point2D screen_point) { screen_x_ = screen_point.x;
                                               screen_y_ = screen_point.y; }
@@ -139,18 +139,19 @@ struct CostFunctor {
   CostFunctor(IKSolver* solver)
       : solver_(solver) {}
 
-  template <typename T> bool operator()(const T* const angle, T* residual) const {
+  template <typename T> bool operator()(const T* const robot_state, T* residual) const {
     // Objective function: residual = Rx - s
 
     Eigen::Matrix<T,4,1> v(T(solver_->drag_x_), T(solver_->drag_y_), T(solver_->drag_z_), T(1.0));
     Eigen::Matrix<T,4,1> v_tmp;
 
-    T* state;
-    T tmp = T(*angle);
-    state = &tmp;
+    //T* state;
+    //T tmp = T(*angle);
+    //state = &tmp;
 
-    for (int i = 0; i < solver_->transforms.size(); ++i) {
-        solver_->transforms[i]->apply( state, v, v_tmp );
+    for (int i = solver_->start_transform_index_; i >= 0; --i) {
+        //solver_->transforms[i]->apply( state, v, v_tmp );
+        solver_->transforms[i]->apply( robot_state, v, v_tmp );
         v = v_tmp;
     }
 
@@ -240,7 +241,7 @@ EMSCRIPTEN_BINDINGS() {
         .function("projectDragPoint", &IKSolver::projectDragPoint)
         .property("screen_point", &IKSolver::getScreenPoint, &IKSolver::setScreenPoint)
         .property("drag_point", &IKSolver::getDragPoint, &IKSolver::setDragPoint)
-        .property("angle", &IKSolver::getAngle, &IKSolver::setAngle)
+        .function("setStartTransformIndex", &IKSolver::setStartTransformIndex)
         ;
 }
 
@@ -251,7 +252,7 @@ int main(int argc, char** argv) {
   solver.setDragPoint(Point3D(0.0, 0.5, 0.5));
   solver.setScreenPoint(Point2D(0.5, 0.5));
   solver.stepSolve(10);
-  double angle = solver.getAngle();
+  double angle = solver.getJointValue(0);
   cout << "angle = " << angle << "\n";
   double mat[9];
   double angle_axis[3] = {0, 0, angle};
