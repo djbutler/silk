@@ -61,6 +61,9 @@
                 var radius = 10;
                 var thickness = 10;
 
+                var arm_link_name = 'l_shoulder_pan_link';
+                var arm_joint_idx;
+
                 var loader = new THREE.ColladaLoader();
                 loader.options.convertUpAxis = true;
                 loader.load( '../../models/pr2/collada/openrave-pr2.dae', function ( collada_ ) {
@@ -118,7 +121,7 @@
                 }
 
                 function projectPoint() {
-                    var arm = dae.getObjectByName('l_shoulder_lift_link');
+                    var arm = dae.getObjectByName(arm_link_name);
                     raycaster.setFromCamera( cursor_normalized, camera );
                     var intersects = raycaster.intersectObject( arm, true );
                     if (intersects.length > 0) {
@@ -188,7 +191,7 @@
                         }
                         console.log(links);
                         // then, starting with 'arm', add links to the solver until N_JOINTS joints have been added
-                        // l_shoulder_lift_link to world
+                        // arm to world
                         solver.addStaticTransform(arm.parent.matrixWorld.elements);
                         var num_joints = 0;
                         for (var i = links.length - 1; i >= 0; i--) {
@@ -223,16 +226,20 @@
 
                     // Set drag point
                     drag_point = point;
-                    var drag_point_local = link.worldToLocal(drag_point.clone());
+                    var nearest_link = link;
+                    while (!linkToIndex[nearest_link.name]) {
+                        nearest_link = nearest_link.parent;
+                    }
+                    var drag_point_local = nearest_link.worldToLocal(drag_point.clone());
                     solver.drag_point = [drag_point_local.x, drag_point_local.y, drag_point_local.z];
-                    solver.setStartTransformIndex( linkToIndex[link.name] );
+                    solver.setStartTransformIndex( linkToIndex[nearest_link.name] );
                     
                     // Visualize the drag point
                     drag_point_visual.position.set(drag_point_local.x, drag_point_local.y, drag_point_local.z);
                     if (drag_point_visual.parent) {
                         drag_point_visual.parent.remove(drag_point_visual);
                     }
-                    link.add(drag_point_visual);
+                    nearest_link.add(drag_point_visual);
 
                     // Set screen size
                     solver.setDims([renderer2d.domElement.width, renderer2d.domElement.height]);
@@ -247,7 +254,7 @@
                     solver.screen_point = [cursor.x, cursor.y];
                     solver.timeSolve(0.1);
                     for (var i = 0; i < N_JOINTS; i++) {
-                        kinematics.setJointValue(16 + i, solver.getJointValue(i));
+                        kinematics.setJointValue(arm_joint_idx + i, solver.getJointValue(i));
                     }
                 }
 
@@ -262,7 +269,7 @@
                     // update the picking ray with the camera and mouse position    
                     raycaster.setFromCamera( cursor_normalized, camera );   
                     // calculate objects intersecting the picking ray
-                    var arm = dae.getObjectByName('l_shoulder_lift_link');
+                    var arm = dae.getObjectByName(arm_link_name);
                     var intersects = raycaster.intersectObject( arm, true );
                     if (intersects.length > 0) {
                         initIK(intersects[0].point, intersects[0].object.parent, arm);
@@ -313,7 +320,7 @@
                     // Add the COLLADA
                     THREE.Object3D.prototype.traverseDepth = function (a, i) {if(!1!==this.visible){a(this, i);for(var b=this.children,c=0,d=b.length;c<d;c++)b[c].traverseDepth(a,i+1)}};
                     dae.traverseDepth(function(obj, i) { if (obj.material) { obj.material.color.setHex(0x999999) ; } }, 0);
-                    dae.getObjectByName('l_shoulder_lift_link').traverseDepth(function(obj, i) { if (obj.material) { obj.material.color.setHex(0x669966) ; } }, 0);
+                    dae.getObjectByName(arm_link_name).traverseDepth(function(obj, i) { if (obj.material) { obj.material.color.setHex(0x669966) ; } }, 0);
                     scene.add( dae );
 
                     // Gripper guides
@@ -332,6 +339,9 @@
                     var geometry = new THREE.SphereGeometry(0.01); 
                     drag_point_visual = new THREE.Mesh( geometry, material );
                     drag_point_visual.visible = false;
+
+                    // Arm index
+                    arm_joint_idx = findJointByName(arm_link_name);
 
                     // Lights
                     particleLight = new THREE.Mesh( new THREE.SphereGeometry( 4, 8, 8 ), new THREE.MeshBasicMaterial( { color: 0xffffff } ) );
@@ -358,7 +368,7 @@
                     controls = new THREE.OrbitControls( camera, renderer.domElement );
 
                     // turns out you need to wait a cycle until matrixWorld is updated
-                    // initSolverSceneGraph(dae.getObjectByName('l_shoulder_lift_link'));
+                    // initSolverSceneGraph(dae.getObjectByName(arm_link_name));
 
                     stats = new Stats();
                     stats.domElement.style.position = 'absolute';
