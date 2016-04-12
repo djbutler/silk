@@ -1,0 +1,3 @@
+rosrun xacro xacro.py -o ur5_joint_limited_robot.urdf ur5_joint_limited_robot.urdf.xacro 
+rosrun collada_urdf urdf_to_collada ur5_joint_limited_robot.urdf ur5_joint_limited_robot.dae
+openrave -save ur5_joint_limited_robot_openrave.dae ur5_joint_limited_robot.dae
