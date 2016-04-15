@@ -1,3 +1,8 @@
+---
+layout: post
+title: Silk - About 
+---
+
 ## Cheap, easy, convenient: For robotic telemanipulation, pick two
 
 ### Question: Can we make a robotic arm as cheap, easy, and convenient to remote control as a toy car?
