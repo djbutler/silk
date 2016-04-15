@@ -16,27 +16,32 @@
             </div>
         </div>
         <div class="column" style="padding-left: 40px; padding-top: 40px">
-            <!-- camera-plane dragging -->
-            <!-- sparsity-inducing prior on joint angle deltas -->
-            <!-- prior on joint angles to penalize overall amount of motion -->
-            <!-- left click flexes, right click rolls (no IK) -->
-            <!-- control only 2 joints at a time (2D input) -->
             <!-- roslibjs's interactive markers with Silk's IK -->
-            <!-- Double tap on scene element to set camera focus (like iOS Safari) -->
-            <!-- Multi-touch IK (PR2 arm) -->
             <!-- Axis snapping (Sketchup-style) -->
+            <!-- camera-plane dragging (with planar guide) -->
+            
+            <!-- Object snapping (with a fake scene) -->
+
+            <!-- control only 1 or 2 joints at a time (for instance, hover link and its parent) -->
+
+            <!-- put a few IK regularization options in a menu (function type, function params, scaling/weighting) -->
+            <!-- Multi-touch IK (naive is probably not useful, but fun exercise!) -->
+
             <!-- Viewpoint Experiments -->
+                <!-- Double tap on scene element to set camera focus (like iOS Safari) -->
                 <!-- Tilt device to swivel camera -->
                 <!-- Buttons for different camera perspectives -->
                 <!-- Render scene from robot's perspective -->
-            <!-- Object snapping (with a fake scene) -->
-            <!-- Render textured KinectFusion mesh -->
-            <!-- Render pointcloud (roslibjs shader) -->
-            <!-- Concealing missing parts of pointcloud ("fog of war") -->
-            <!-- Tilt for "arm flight control" -->
-            <!-- Physics sim of PR2 (https://github.com/jicksta/threejs-collada-physics/blob/physijs/demo.html) -->
-            <!-- Use physics sim to control PR2 -->
-            <!-- Storyboarding of motions (panels, motion arrows) -->
+
+            <!-- Probably won't impl -->
+                <!-- Render textured KinectFusion mesh -->
+                <!-- Render pointcloud (roslibjs shader) -->
+                <!-- Concealing missing parts of pointcloud ("fog of war") -->
+                <!-- "Arm flight control" using device tilt -->
+                <!-- Physics sim of PR2 (https://github.com/jicksta/threejs-collada-physics/blob/physijs/demo.html) -->
+                <!-- Use physics sim to control PR2 -->
+                <!-- Storyboarding of motions (panels, motion arrows) -->
+
             <a class="preview-image-box" href="scenes/regularized_ik" style="background-image:url(scenes/regularized_ik/thumb.png)"> 
                 <div class="preview-text-box"> 
                     <div class="title">Regularized IK</div>
