@@ -27,6 +27,7 @@ This state of affairs leads to a natural question: is it possible to make more u
 New ideas and strategies are needed in order to make substantial gains.
 
 Some fundamental strategies that we adopt are:
+
 1. iterating rapidly on user interface concepts;
 2. putting these interfaces in front of potential end-users to collect realistic evaluations;
 3. using quantitative evaluation criteria (both objective and subjective) to verify that progress is being made;
