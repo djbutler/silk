@@ -22,6 +22,8 @@ Relatively cheap telepresence robots ($1500-$2500) have been gaining traction. I
 
 Prior research has looked at robot user interfaces on commodity hardware. However, significant usability and efficiency issues remain. Even simple tasks such as picking up an object can take several minutes. More complex tasks, such as pouring a glass of water or opening a door, can be even more time consuming, if they are even possible at all.
 
+Another reason why traditional mouse-and-keyboard interfaces may be preferable to 3D input devices is that over the past 30 years they have proven very durable despite other alternatives. While the 3D aspects of manipulation may benefit from new input devices, traditional mouse-and-keyboard interfaces have proven very effective at affording and organizing discrete user actions.
+
 This state of affairs leads to a natural question: is it possible to make more usable and efficient user interfaces for controlling robotic manipulators using commodity input devices?
 
 New ideas and strategies are needed in order to make substantial gains.
