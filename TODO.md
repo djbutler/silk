@@ -1,3 +1,7 @@
+---
+title: Silk TODOs
+---
+
 roslibjs's interactive markers with Silk's IK 
 Axis snapping (Sketchup-style)
 camera-plane dragging (with planar guide)
@@ -14,6 +18,9 @@ control only 1 or 2 joints at a time (for instance, hover link and its parent)
 
 put a few IK regularization options in a menu (function type, function params, scaling/weighting) 
 Multi-touch IK (naive is probably not useful, but fun exercise!) 
+
+Misc
+- Multiple views for comparing interactions side-by-side
 
 Viewpoint Experiments 
 - Multiple viewpoints simultaneously (wide, zoomed-in, and )
