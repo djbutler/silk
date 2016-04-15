@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+
+<script src="../../js/three.min.js"></script>
+
+<script src="../../js/loaders/ColladaLoader.js"></script>
+<script src="../../js/renderers/CanvasRenderer.js"></script>
+<script src="../../js/renderers/Projector.js"></script>
+<script src="../../js/controls/OrbitControls.js"></script>
+<script src="../../js/Detector.js"></script>
+<script src="../../js/sketch.js"></script>
+
+<!-- <script src="http://cdn.robotwebtools.org/threejs/current/three.min.js"></script> -->
+
+<script src="http://cdn.robotwebtools.org/EventEmitter2/current/eventemitter2.min.js"></script>
+<script src="http://cdn.robotwebtools.org/roslibjs/current/roslib.min.js"></script>
+<script src="../../js/ros3d.js"></script>
+
+<script src="../../js/marker_msg_6dof.js"></script>
+
+<script src="solver.js"></script>
+
+<!-- <script src="http://cdn.robotwebtools.org/threejs/r61/ColladaLoader.js"></script> -->
+
+<script>
+  var ros, viewer, marker_client;
+
+  var dae;
+  var collada;
+
+  var kinematics;
+  var kinematicsTween;
+  var tweenParameters = {};
+
+  var loader = new THREE.ColladaLoader();
+  loader.options.convertUpAxis = true;
+  loader.load( '../../models/pr2/collada/openrave-pr2.dae', function ( collada_ ) {
+
+      collada = collada_;
+      dae = collada.scene;
+
+      dae.traverse( function ( child ) {
+
+          if ( child instanceof THREE.Mesh ) {
+
+              child.geometry.computeFaceNormals();
+              child.material.shading = THREE.FlatShading;
+
+          }
+
+      } );
+
+      dae.scale.x = dae.scale.y = dae.scale.z = 10.0;
+      dae.updateMatrix();
+
+      kinematics = collada.kinematics;
+
+      init();
+      //animate();
+
+  } );
+
+  function getControlPoints(obj) {
+      var x_offset = new THREE.Vector3(1, 0, 0);
+      var y_offset = new THREE.Vector3(0, 1, 0);
+      var points = [
+        obj.position,
+        obj.position.clone().add(x_offset.applyQuaternion(obj.quaternion)),
+        obj.position.clone().add(y_offset.applyQuaternion(obj.quaternion))
+      ]
+      return points;
+  }
+
+  function init() {
+    viewer = new ROS3D.Viewer({
+      divID : 'markers',
+      width : window.innerWidth,
+      height : window.innerHeight,
+      antialias : true
+    });
+
+    marker_client = new ROS3D.InteractiveMarkerClient({
+      pure_client_side : true,
+      camera : viewer.camera,
+      rootObject : viewer.selectableObjects
+    });
+
+    marker_client.processUpdate({markers:[marker_msg], erases:[], poses:[]});
+    marker_obj = marker_client.rootObject.children[0];
+
+    // Add a grid.
+    viewer.addObject(new ROS3D.Grid());    
+
+    // Add robot
+    dae.applyMatrix((new THREE.Matrix4).makeRotationX(Math.PI/2))
+    dae.scale.multiplyScalar(0.3);
+    viewer.addObject( dae );
+}
+</script>
+</head>
+<!-- <body onload="init()"> -->
+<body>
+  <div id="markers"></div>
+  <!-- <script> init(); </script> -->
+</body>
+</html>
