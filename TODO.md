@@ -3,6 +3,8 @@ layout: post
 title: Silk TODOs
 ---
 
+### Priorities
+
 roslibjs's interactive markers with Silk's IK 
 Axis snapping (Sketchup-style)
 camera-plane dragging (with planar guide)
@@ -20,10 +22,15 @@ control only 1 or 2 joints at a time (for instance, hover link and its parent)
 put a few IK regularization options in a menu (function type, function params, scaling/weighting) 
 Multi-touch IK (naive is probably not useful, but fun exercise!) 
 
-Misc
+### Evaluation
+
+the docking task
+a game
+
+### Misc
 - Multiple views for comparing interactions side-by-side
 
-Viewpoint Experiments 
+### Viewpoint Experiments 
 - Multiple viewpoints simultaneously (wide, zoomed-in, and )
 - Viewpoint changes to be perpendicular to controlled degree of freedom
 - Double tap on scene element to set camera focus (like iOS Safari) 
@@ -31,7 +38,7 @@ Viewpoint Experiments
 - Buttons for different camera perspectives 
 - Render scene from robot's perspective 
 
-Probably won't impl 
+### Probably won't impl 
 - Render textured KinectFusion mesh 
 - Render pointcloud (roslibjs shader) 
 - Concealing missing parts of pointcloud ("fog of war") 
