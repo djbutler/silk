@@ -78,7 +78,8 @@
       divID : 'markers',
       width : window.innerWidth,
       height : window.innerHeight,
-      antialias : true
+      antialias : true,
+      background:  '#cccccc'
     });
 
     marker_client = new ROS3D.InteractiveMarkerClient({
@@ -91,7 +92,7 @@
     marker_obj = marker_client.rootObject.children[0];
 
     // Add a grid.
-    viewer.addObject(new ROS3D.Grid());    
+    viewer.addObject(new ROS3D.Grid({color: '#999999'}));    
 
     // Add robot
     dae.applyMatrix((new THREE.Matrix4).makeRotationX(Math.PI/2))
