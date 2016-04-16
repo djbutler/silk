@@ -40,3 +40,13 @@ We observe that prior research adopting these strategies has been both impactful
 
 We are particularly interested in interfaces that take advantage of mid-level perceptual information - point clouds, planes, edges. This type of information is can be acquired more robustly in a wider variety of settings than high-level perceptual information such as object categories (e.g. distinguishing book vs. box, or apple vs. pear). In this way, we hope to improve the usability and efficiency of teleoperation without sacrificing too much of its generality.
 
+Hierarchy of UIs based on the sophistication of the perception system:
+
+1. no visual information
+2. raw point cloud (raw Kinect, semi-dense 3D geometry)
+3. fused point cloud (KinectFusion, dense 3D geometry)
+4. edge / feature detection for snapping
+5. grasp detection
+6. object segmentation
+7. object recognition
+
