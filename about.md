@@ -38,3 +38,5 @@ Some fundamental strategies that we adopt are:
 
 We observe that prior research adopting these strategies has been both impactful and also quite rare in the domain of telemanipulation. (Leeper, Hauser, Dragan).
 
+We are particularly interested in interfaces that take advantage of mid-level perceptual information - point clouds, planes, edges. This type of information is can be acquired more robustly in a wider variety of settings than high-level perceptual information such as object categories (e.g. distinguishing book vs. box, or apple vs. pear). In this way, we hope to improve the usability and efficiency of teleoperation without sacrificing too much of its generality.
+
