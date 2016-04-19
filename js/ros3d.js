@@ -3855,6 +3855,9 @@ ROS3D.Viewer = function(options) {
     fallbackTarget : this.cameraControls
   });
 
+  // draw callbacks
+  this.drawCallbacks = [];
+
   // highlights the receiver of mouse events
   if (this.highlight) {
     this.highlighter = new ROS3D.Highlighter({
@@ -3866,6 +3869,11 @@ ROS3D.Viewer = function(options) {
    * Renders the associated scene to the viewer.
    */
   function draw() {
+    // call the callbacks
+    for (var i = 0; i < that.drawCallbacks.length; i++) {
+        that.drawCallbacks[i]();
+    }
+
     // update the controls
     that.cameraControls.update();
 
@@ -3906,6 +3914,13 @@ ROS3D.Viewer.prototype.addObject = function(object, selectable) {
   } else {
     this.scene.add(object);
   }
+};
+
+/**
+ * Register a callback to be called during draw()
+ */
+ROS3D.Viewer.prototype.addDrawCallback = function(callback) {
+  this.drawCallbacks.push(callback);
 };
 
 /**
@@ -4127,6 +4142,16 @@ ROS3D.MouseHandler.prototype.processDomEvent = function(domEvent) {
     camera : this.camera,
     intersection : this.lastIntersection
   };
+
+/*
+  if (domEvent.type.indexOf('mousemove') === -1) {
+      console.log('mouseevent, ' + domEvent.type + 'MouseHandler.dragging = ' + this.dragging);
+      console.log('this.lastTarget = ');
+      console.log( this.lastTarget );
+      console.log('target = ');
+      console.log(target);
+  }
+*/
 
   // if the mouse leaves the dom element, stop everything
   if (domEvent.type === 'mouseout') {
