@@ -68,17 +68,6 @@ margin: 0px;
 
   } );
 
-  function getControlPoints(obj) {
-      var x_offset = new THREE.Vector3(1, 0, 0);
-      var y_offset = new THREE.Vector3(0, 1, 0);
-      var points = [
-        obj.position,
-        obj.position.clone().add(x_offset.applyQuaternion(obj.quaternion)),
-        obj.position.clone().add(y_offset.applyQuaternion(obj.quaternion))
-      ]
-      return points;
-  }
-
   function init() {
     viewer = new ROS3D.Viewer({
       divID : 'markers',
@@ -96,6 +85,11 @@ margin: 0px;
 
     marker_client.processUpdate({markers:[marker_msg], erases:[], poses:[]});
     marker_obj = marker_client.rootObject.children[0];
+    // Quick hack to remove cube
+    marker_obj.children.splice(0,1);
+    marker_obj.position.x = 2.5;
+    marker_obj.position.y = 1;
+    marker_obj.position.z = 2.5;
 
     // Add a grid.
     viewer.addObject(new ROS3D.Grid({color: '#999999'}));
@@ -106,7 +100,7 @@ margin: 0px;
     viewer.addObject( dae, true );
 
     // Initialize IK 
-    IK.init(viewer, dae, kinematics);
+    IK.init({viewer: viewer, robot: dae, kinematics: kinematics, marker: marker_obj});
 
 }
 </script>

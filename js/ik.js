@@ -22,14 +22,20 @@ var IK = (function () {
   var renderer;
   var robot;
   var kinematics;
+  var marker;
 
-  module.init = function (viewer, robot_object, robot_kinematics) {
-    solver = new Module.IKSolver;
+  module.init = function (options) {
+    var viewer = options.viewer;
+    robot = options.robot;
+    kinematics = options.kinematics;
+    marker = options.marker;
+
     camera = viewer.camera;
     renderer = viewer.renderer;
-    robot = robot_object;
-    kinematics = robot_kinematics;
+
+    solver = new Module.IKSolver;
     arm_joint_idx = findJointByName(arm_link_name);
+
     // Add solver callback
     viewer.addDrawCallback(function () {
       if (dragging_object) {
@@ -59,6 +65,17 @@ var IK = (function () {
 
   function stopPropagation(event) {
     event.stopPropagation();
+  }
+
+  function getControlPoints(obj) {
+      var x_offset = new THREE.Vector3(1, 0, 0);
+      var y_offset = new THREE.Vector3(0, 1, 0);
+      var points = [
+        obj.position,
+        obj.position.clone().add(x_offset.applyQuaternion(obj.quaternion)),
+        obj.position.clone().add(y_offset.applyQuaternion(obj.quaternion))
+      ]
+      return points;
   }
 
   function findJointByName(nodeName) {
