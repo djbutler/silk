@@ -9,6 +9,7 @@ margin: 0px;
 }
 </style>
 
+<script src="solver.js"></script>
 <script src="../../js/three.min.js"></script>
 
 <script src="../../js/loaders/ColladaLoader.js"></script>
@@ -26,7 +27,6 @@ margin: 0px;
 
 <script src="../../js/marker_msg_6dof.js"></script>
 
-<script src="solver.js"></script>
 <script src="../../js/ik.js"></script>
 
 <!-- <script src="http://cdn.robotwebtools.org/threejs/r61/ColladaLoader.js"></script> -->
@@ -79,10 +79,6 @@ margin: 0px;
       return points;
   }
 
-  function stopPropagation(event) {
-    event.stopPropagation();
-  }
-
   function init() {
     viewer = new ROS3D.Viewer({
       divID : 'markers',
@@ -109,48 +105,9 @@ margin: 0px;
     dae.scale.multiplyScalar(0.3);
     viewer.addObject( dae, true );
 
-    // Messy stuff for initalizing IK
-    dae.addEventListener('mousedown', function (event) { console.log('robot mousedown'); });
-    dae.addEventListener('mouseup', function (event) { console.log('robot mouseup'); });
-    dae.addEventListener('mouseover', stopPropagation);
-    dae.addEventListener('mouseout', stopPropagation);
-    dae.addEventListener('click', stopPropagation);
-    dae.addEventListener('mousedown', stopPropagation);
-    dae.addEventListener('mouseup', stopPropagation);
-    camera = viewer.camera;
-    renderer = viewer.renderer;
-    linkToIndex = {};
-    dragging_object = false;
-    arm_link_name = 'l_shoulder_pan_link';
-    arm_joint_idx = findJointByName(arm_link_name);
-    solver = new Module.IKSolver;
-    raycaster = new THREE.Raycaster();
-    cursor = new THREE.Vector2( -200, -200 );
-    cursor_normalized = new THREE.Vector2( -200, -200 );
-    drag_point = new THREE.Vector3( 0, 0, 0);
-    projected_point = new THREE.Vector2( -200, -200 );
-    // Create the drag point dot
-    var material = new THREE.MeshBasicMaterial( { color: 0x000000 } );
-    var geometry = new THREE.SphereGeometry(0.01);
-    drag_point_visual = new THREE.Mesh( geometry, material );
-    drag_point_visual.visible = false;
-    // Add solver callback
-    viewer.addDrawCallback(function () {
-      if (dragging_object) {
-        solveIK();
-      }
-    });
-    // IK callbacks
-    document.addEventListener('mousedown', handleMouseDown);
-    document.addEventListener('mouseup', handleMouseUp);
-    document.addEventListener('mousemove', function(event) {
-        // calculate mouse position in normalized device coordinates
-        // (-1 to +1) for both components
-        cursor_normalized.x = ( event.x / window.innerWidth ) * 2 - 1;
-        cursor_normalized.y = - ( event.y / window.innerHeight ) * 2 + 1;
-        cursor.x = event.x;
-        cursor.y = event.y;
-    });
+    // Initialize IK 
+    IK.init(viewer, dae, kinematics);
+
 }
 </script>
 </head>
