@@ -2,7 +2,7 @@ var IK = (function () {
   // the variable IK will point to the module object
   module = {};
 
-  var use2d = true;
+  var use2d = false;
 
   var linkToIndex = {};
   var dragging_object = false;
@@ -40,6 +40,7 @@ var IK = (function () {
     renderer = viewer.renderer;
 
     solver = new Module.IKSolver;
+    module.solver = solver;
     if (use2d) {
         solver.addTargetPoint2D();
     } else {
@@ -49,22 +50,21 @@ var IK = (function () {
     arm_joint_idx = findJointByName(arm_link_name);
     arm = robot.getObjectByName(arm_link_name);
 
-    initSolverSceneGraph();
-
     if (!use2d) {
         initIK(null, null);
     }
 
     // Add solver callback
     viewer.addDrawCallback(function () {
-      if (dragging_object || marker.dragging) {
+      if (dragging_object) {
         solveIK();
       }
     });
 
     if (!use2d) {
         // For 3D dragging
-        marker.addEventListener('mousedown', function(event) { initIK(null, null); });
+        marker.addEventListener('user-mousedown', function(event) { dragging_object = true; });
+        marker.addEventListener('user-mouseup', function(event) { dragging_object = false; });
     }
 
     // IK callbacks
@@ -204,9 +204,9 @@ var IK = (function () {
       }
   }
 
+  // Called once at the beginning of a drag in order to reset the IK optimization
   function initIK(point, link) {
-      // Called once at the beginning of a drag in order to reset the IK optimization
-      //initSolverSceneGraph();
+      initSolverSceneGraph();
 
       if (use2d) {
 
@@ -280,5 +280,6 @@ var IK = (function () {
       setDragging(false);
   }
 
+  // Export a few variables to help debugging
   return module;
 })();
