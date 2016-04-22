@@ -34,29 +34,32 @@ using namespace std;
 class IKSolver {
   
 public:
-  
-  double width_;
-  double height_;
-  double robot_state_[7];
-  double screen_x_;
-  double screen_y_;
-  double drag_x_;
-  double drag_y_;
-  double drag_z_;
+ 
+  // Camera information 
   // NOTE: camera matrix is composed of camera extrinsic and intrinsic matrices
   Mat4 cameraMatrix_;
+  double width_;
+  double height_;
+  // 2d drag points
+  vector<boost::shared_ptr<Point2D> > targets_2d_;
+  vector<boost::shared_ptr<Point3D> > drags_2d_;
+  // 3d drag points
+  vector<boost::shared_ptr<Point3D> > targets_3d_;
+  vector<boost::shared_ptr<Point3D> > drags_3d_;
+  // kinematic chain
   vector<boost::shared_ptr<Transform> > transforms;
-  Problem problem_; 
   int num_joints_;
   int start_transform_index_;
+  double robot_state_[7];
+  // Ceres problem instance
+  Problem problem_; 
   
-  IKSolver() : start_transform_index_(0), num_joints_(0), screen_x_(0.0), screen_y_(0.0), drag_x_(0.0), drag_y_(0.0), drag_z_(0.0) {
-    buildProblem();
-  }
+  IKSolver() : start_transform_index_(0), num_joints_(0) {}
   
   // defined later in this file
   // ugly, but lets me avoid separate class declaration and definition, which would slow me down
-  void buildProblem();
+  void addTargetPoint2D();
+  void addTargetPoint3D();
 
   int getNumTransforms() { return transforms.size(); }
 
@@ -75,18 +78,6 @@ public:
 
   void setStartTransformIndex(int idx) { start_transform_index_ = idx; }
   
-  Point2D projectDragPoint() {
-    Eigen::Matrix<double,4,1> drag_point(drag_x_, drag_y_, drag_z_, 1.0);
-    Eigen::Matrix<double,2,1> pt(0.0, 0.0);
-    // apply projection
-    projectPoint(drag_point, pt);
-    // copy to output
-    Point2D point;
-    point.x = pt(0);
-    point.y = pt(1);
-    return point;
-  }
-
   template<typename T> inline void projectPoint(const Eigen::Matrix<T,4,1> & pt, Eigen::Matrix<T,2,1> & out) {
     Eigen::Matrix<T,4,4> P;
     matToEigen(cameraMatrix_, P);
@@ -102,14 +93,13 @@ public:
     height_ = dims.y;
   }
 
-  Point2D getScreenPoint() const { return Point2D(screen_x_, screen_y_); }
-  void setScreenPoint(Point2D screen_point) { screen_x_ = screen_point.x;
-                                              screen_y_ = screen_point.y; }
-  
-  Point3D getDragPoint() const { return Point3D(drag_x_, drag_y_, drag_z_); }
-  void setDragPoint(Point3D drag_point) { drag_x_ = drag_point.x;
-                                          drag_y_ = drag_point.y;
-                                          drag_z_ = drag_point.z; }
+  // 2D drag points
+  void setTargetPoint2D(int idx, Point2D target_point) { *targets_2d_[idx] = target_point; }
+  void setDragPoint2D(int idx, Point3D drag_point) { *drags_2d_[idx] = drag_point; }
+
+  // 3D drag points
+  void setTargetPoint3D(int idx, Point3D target_point) { *targets_3d_[idx] = target_point; }
+  void setDragPoint3D(int idx, Point3D drag_point) { *drags_3d_[idx] = drag_point; }
 
   void stepSolve(int step_limit) {
     // Run the solver!
@@ -136,25 +126,26 @@ public:
 };
 
 
-struct CostFunctor {
+struct CostFunctor2D {
 
   IKSolver* solver_;
+  int index_;
 
-  CostFunctor(IKSolver* solver)
-      : solver_(solver) {}
+  CostFunctor2D(int idx, IKSolver* solver)
+      : solver_(solver), index_(idx) {}
 
   template <typename T> bool operator()(const T* const robot_state, T* residual) const {
     // Objective function: residual = Rx - s
 
-    Eigen::Matrix<T,4,1> v(T(solver_->drag_x_), T(solver_->drag_y_), T(solver_->drag_z_), T(1.0));
+    Eigen::Matrix<T,4,1> v(
+        T(solver_->drags_2d_[index_]->x),
+        T(solver_->drags_2d_[index_]->y),
+        T(solver_->drags_2d_[index_]->z),
+        T(1.0)
+    );
     Eigen::Matrix<T,4,1> v_tmp;
 
-    //T* state;
-    //T tmp = T(*angle);
-    //state = &tmp;
-
     for (int i = solver_->start_transform_index_; i >= 0; --i) {
-        //solver_->transforms[i]->apply( state, v, v_tmp );
         solver_->transforms[i]->apply( robot_state, v, v_tmp );
         v = v_tmp;
     }
@@ -163,20 +154,68 @@ struct CostFunctor {
     Eigen::Matrix<T,2,1> pt_cam(T(0.0), T(0.0));
     solver_->projectPoint(v, pt_cam);
 
-    residual[0] = pt_cam(0) - T(solver_->screen_x_);
-    residual[1] = pt_cam(1) - T(solver_->screen_y_);
+    residual[0] = pt_cam(0) - T(solver_->targets_2d_[index_]->x);
+    residual[1] = pt_cam(1) - T(solver_->targets_2d_[index_]->y);
 
     return true;
   }
 
 };
 
+struct CostFunctor3D {
 
-void IKSolver::buildProblem() {
+  IKSolver* solver_;
+  int index_;
+
+  CostFunctor3D(int idx, IKSolver* solver)
+      : solver_(solver), index_(idx) {}
+
+  template <typename T> bool operator()(const T* const robot_state, T* residual) const {
+    // Objective function: residual = Rx - s
+
+    Eigen::Matrix<T,4,1> v(
+        T(solver_->drags_3d_[index_]->x),
+        T(solver_->drags_3d_[index_]->y),
+        T(solver_->drags_3d_[index_]->z),
+        T(1.0)
+    );
+    Eigen::Matrix<T,4,1> v_tmp;
+
+    for (int i = solver_->start_transform_index_; i >= 0; --i) {
+        solver_->transforms[i]->apply( robot_state, v, v_tmp );
+        v = v_tmp;
+    }
+
+    residual[0] = v(0) - T(solver_->targets_3d_[index_]->x);
+    residual[1] = v(1) - T(solver_->targets_3d_[index_]->y);
+    residual[2] = v(2) - T(solver_->targets_3d_[index_]->z);
+
+    return true;
+  }
+
+};
+
+void IKSolver::addTargetPoint2D() {
+    // add term to objective
     CostFunction* cost_function =
-        new AutoDiffCostFunction<CostFunctor, 2, 7>(new CostFunctor(this));
+        new AutoDiffCostFunction<CostFunctor2D, 2, 7>(new CostFunctor2D(targets_2d_.size(), this));
     problem_.AddResidualBlock(cost_function, NULL, robot_state_);
+    // make room to store the new point
+    targets_2d_.push_back(boost::make_shared<Point2D>(0.0, 0.0));
+    drags_2d_.push_back(boost::make_shared<Point3D>(0.0, 0.0, 0.0));
 }
+
+void IKSolver::addTargetPoint3D() {
+    // add term to objective
+    CostFunction* cost_function =
+        new AutoDiffCostFunction<CostFunctor3D, 3, 7>(new CostFunctor3D(targets_3d_.size(), this));
+    problem_.AddResidualBlock(cost_function, NULL, robot_state_);
+    // make room to store the new point
+    targets_3d_.push_back(boost::make_shared<Point3D>(0.0, 0.0, 0.0));
+    drags_3d_.push_back(boost::make_shared<Point3D>(0.0, 0.0, 0.0));
+}
+
+
 
 /*
 class RenderingCallback : public IterationCallback {
@@ -242,9 +281,15 @@ EMSCRIPTEN_BINDINGS() {
         .function("addJointTransform", &IKSolver::addJointTransform)
         .function("addStaticTransform", &IKSolver::addStaticTransform)
         .function("setCameraMatrix", &IKSolver::setCameraMatrix)
-        .function("projectDragPoint", &IKSolver::projectDragPoint)
-        .property("screen_point", &IKSolver::getScreenPoint, &IKSolver::setScreenPoint)
-        .property("drag_point", &IKSolver::getDragPoint, &IKSolver::setDragPoint)
+        // 2D points
+        .function("addTargetPoint2D", &IKSolver::addTargetPoint2D)
+        .function("setTargetPoint2D", &IKSolver::setTargetPoint2D)
+        .function("setDragPoint2D", &IKSolver::setDragPoint2D)
+        // 3D points
+        .function("addTargetPoint3D", &IKSolver::addTargetPoint3D)
+        .function("setTargetPoint3D", &IKSolver::setTargetPoint3D)
+        .function("setDragPoint3D", &IKSolver::setDragPoint3D)
+        // misc
         .function("setStartTransformIndex", &IKSolver::setStartTransformIndex)
         ;
 }

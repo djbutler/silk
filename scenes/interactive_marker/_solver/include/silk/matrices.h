@@ -33,4 +33,5 @@ struct Point3D {
   Point3D(double x_, double y_, double z_) : x(x_), y(y_), z(z_) {}
 };
 
+
 #endif
