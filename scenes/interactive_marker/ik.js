@@ -2,7 +2,7 @@ var IK = (function () {
   // the variable IK will point to the module object
   module = {};
 
-  var use2d = false;
+  var use2d = true;
 
   var linkToIndex = {};
   var dragging_object = false;
@@ -39,19 +39,19 @@ var IK = (function () {
     camera = viewer.camera;
     renderer = viewer.renderer;
 
-    solver = new Module.IKSolver;
-    module.solver = solver;
-    if (use2d) {
-        solver.addTargetPoint2D();
-    } else {
-        solver.addTargetPoint3D();
-    }
-
     arm_joint_idx = findJointByName(arm_link_name);
     arm = robot.getObjectByName(arm_link_name);
 
-    if (!use2d) {
-        initIK(null, null);
+    solver = new Module.IKSolver;
+    module.solver = solver;
+    if (use2d) {
+        // HACK: remove marker
+        viewer.selectableObjects.children.splice(0,1);
+        solver.addTargetPoint2D();
+    } else {
+        solver.addTargetPoint3D();
+        // move marker
+        setTimeout(function() { marker.position.copy(robot.getObjectByName('l_gripper_palm_link').getWorldPosition()); }, 1000);
     }
 
     // Add solver callback
@@ -61,25 +61,17 @@ var IK = (function () {
       }
     });
 
-    if (!use2d) {
-        // For 3D dragging
-        marker.addEventListener('user-mousedown', function(event) { dragging_object = true; });
-        marker.addEventListener('user-mouseup', function(event) { dragging_object = false; });
-    }
-
     // IK callbacks
-    if (use2d) {
-        document.addEventListener('mousedown', handleMouseDown);
-        document.addEventListener('mouseup', handleMouseUp);
-        document.addEventListener('mousemove', function(event) {
-            // calculate mouse position in normalized device coordinates
-            // (-1 to +1) for both components
-            cursor_normalized.x = ( event.x / window.innerWidth ) * 2 - 1;
-            cursor_normalized.y = - ( event.y / window.innerHeight ) * 2 + 1;
-            cursor.x = event.x;
-            cursor.y = event.y;
-        });
-    }
+    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('mousemove', function(event) {
+        // calculate mouse position in normalized device coordinates
+        // (-1 to +1) for both components
+        cursor_normalized.x = ( event.x / window.innerWidth ) * 2 - 1;
+        cursor_normalized.y = - ( event.y / window.innerHeight ) * 2 + 1;
+        cursor.x = event.x;
+        cursor.y = event.y;
+    });
 
     // ROS3D callbacks
     dae.addEventListener('mouseover', stopPropagation);
@@ -153,7 +145,7 @@ var IK = (function () {
       }
   }
 
-  N_JOINTS = 4;
+  N_JOINTS = 7;
   function initSolverSceneGraph() {
       var link = robot.getObjectByName('l_gripper_palm_link');
       // Called once when the DAE is finished loading
@@ -205,35 +197,31 @@ var IK = (function () {
   }
 
   // Called once at the beginning of a drag in order to reset the IK optimization
-  function initIK(point, link) {
+  function attachDragPointToLink(point, link) {
       initSolverSceneGraph();
 
+      // Set 2D drag point
+      drag_point = point;
+      var nearest_link = link;
+      while (!linkToIndex[nearest_link.name]) {
+          nearest_link = nearest_link.parent;
+      }
+      var drag_point_local = nearest_link.worldToLocal(drag_point.clone());
+      console.log('drag_point_local');
+      console.log(drag_point_local);
       if (use2d) {
-
-          // Set 2D drag point
-          drag_point = point;
-          var nearest_link = link;
-          while (!linkToIndex[nearest_link.name]) {
-              nearest_link = nearest_link.parent;
-          }
-          var drag_point_local = nearest_link.worldToLocal(drag_point.clone());
-          solver.setDragPoint2D(0, [drag_point_local.x, drag_point_local.y, drag_point_local.z]);
-          solver.setStartTransformIndex( linkToIndex[nearest_link.name] );
-
-          // Visualize the drag point
-          drag_point_visual.position.set(drag_point_local.x, drag_point_local.y, drag_point_local.z);
-          if (drag_point_visual.parent) {
-              drag_point_visual.parent.remove(drag_point_visual);
-          }
-          nearest_link.add(drag_point_visual);
-
+        solver.setDragPoint2D(0, [drag_point_local.x, drag_point_local.y, drag_point_local.z]);
       } else {
+        solver.setDragPoint3D(0, [drag_point_local.x, drag_point_local.y, drag_point_local.z]);
+      }
+      solver.setStartTransformIndex( linkToIndex[nearest_link.name] );
 
-          // Set 3D drag point
-          solver.setDragPoint3D(0, [0.0, 0.0, 0.0]);
-          solver.setStartTransformIndex( linkToIndex['l_gripper_palm_link'] );
-
-      } 
+      // Visualize the drag point
+      drag_point_visual.position.set(drag_point_local.x, drag_point_local.y, drag_point_local.z);
+      if (drag_point_visual.parent) {
+          drag_point_visual.parent.remove(drag_point_visual);
+      }
+      nearest_link.add(drag_point_visual);
 
       // Set screen size
       solver.setDims([renderer.domElement.width, renderer.domElement.height]);
@@ -248,7 +236,7 @@ var IK = (function () {
       if (use2d) {
           solver.setTargetPoint2D(0, [cursor.x, cursor.y]);
       } else {
-          solver.setTargetPoint3D(0, [marker.position.x, marker.position.y, marker.position.z]);
+          solver.setTargetPoint3D(0, [marker.getWorldPosition().x, marker.getWorldPosition().y, marker.getWorldPosition().z]);
       }
       solver.timeSolve(0.1);
       for (var i = 0; i < N_JOINTS; i++) {
@@ -263,20 +251,27 @@ var IK = (function () {
       // controls.enableRotate = !dragging;
   }
 
-  function handleMouseDown() {
-      // update the picking ray with the camera and mouse position
-      raycaster.setFromCamera( cursor_normalized, camera );
-      // calculate objects intersecting the picking ray
-      var intersects = raycaster.intersectObject( arm, true );
-      if (intersects.length > 0) {
-          initIK(intersects[0].point, intersects[0].object.parent);
+  function handleMouseDown(event) {
+      if (!use2d) {
+          attachDragPointToLink(marker.getWorldPosition(), robot.getObjectByName('l_gripper_palm_link'));
           setDragging(true);
       } else {
-          setDragging(false);
+          // update the picking ray with the camera and mouse position
+          raycaster.setFromCamera( cursor_normalized, camera );
+          // calculate objects intersecting the picking ray
+          var intersects = raycaster.intersectObject( arm, true );
+          if (intersects.length > 0) {
+              attachDragPointToLink(intersects[0].point, intersects[0].object.parent);
+              console.log('intersects[0].object');
+              console.log(intersects[0].object);
+              setDragging(true);
+          } else {
+              setDragging(false);
+          }
       }
   }
 
-  function handleMouseUp() {
+  function handleMouseUp(event) {
       setDragging(false);
   }
 

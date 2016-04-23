@@ -93,6 +93,44 @@ public:
     height_ = dims.y;
   }
 
+  // get the pose of a drag point 2D
+  Point3D getDragPointPose2D(int idx) {
+    typedef double T;
+    Eigen::Matrix<T,4,1> v(
+        T(drags_2d_[idx]->x),
+        T(drags_2d_[idx]->y),
+        T(drags_2d_[idx]->z),
+        T(1.0)
+    );
+    Eigen::Matrix<T,4,1> v_tmp;
+
+    for (int i = start_transform_index_; i >= 0; --i) {
+        transforms[i]->apply( robot_state_, v, v_tmp );
+        v = v_tmp;
+    }
+
+    return Point3D(v(0)/v(3), v(1)/v(3), v(2)/v(3));
+  }
+
+  // get the pose of a drag point 3D
+  Point3D getDragPointPose3D(int idx) {
+    typedef double T;
+    Eigen::Matrix<T,4,1> v(
+        T(drags_3d_[idx]->x),
+        T(drags_3d_[idx]->y),
+        T(drags_3d_[idx]->z),
+        T(1.0)
+    );
+    Eigen::Matrix<T,4,1> v_tmp;
+
+    for (int i = start_transform_index_; i >= 0; --i) {
+        transforms[i]->apply( robot_state_, v, v_tmp );
+        v = v_tmp;
+    }
+
+    return Point3D(v(0)/v(3), v(1)/v(3), v(2)/v(3));
+  }
+
   // 2D drag points
   void setTargetPoint2D(int idx, Point2D target_point) { *targets_2d_[idx] = target_point; }
   void setDragPoint2D(int idx, Point3D drag_point) { *drags_2d_[idx] = drag_point; }
@@ -186,9 +224,9 @@ struct CostFunctor3D {
         v = v_tmp;
     }
 
-    residual[0] = v(0) - T(solver_->targets_3d_[index_]->x);
-    residual[1] = v(1) - T(solver_->targets_3d_[index_]->y);
-    residual[2] = v(2) - T(solver_->targets_3d_[index_]->z);
+    residual[0] = v(0) / v(3) - T(solver_->targets_3d_[index_]->x);
+    residual[1] = v(1) / v(3) - T(solver_->targets_3d_[index_]->y);
+    residual[2] = v(2) / v(3) - T(solver_->targets_3d_[index_]->z);
 
     return true;
   }
@@ -289,6 +327,8 @@ EMSCRIPTEN_BINDINGS() {
         .function("addTargetPoint3D", &IKSolver::addTargetPoint3D)
         .function("setTargetPoint3D", &IKSolver::setTargetPoint3D)
         .function("setDragPoint3D", &IKSolver::setDragPoint3D)
+        .function("getDragPointPose3D", &IKSolver::getDragPointPose3D)
+        .function("getDragPointPose2D", &IKSolver::getDragPointPose2D)
         // misc
         .function("setStartTransformIndex", &IKSolver::setStartTransformIndex)
         ;
