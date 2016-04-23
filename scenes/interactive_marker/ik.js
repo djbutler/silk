@@ -2,10 +2,11 @@ var IK = (function () {
   // the variable IK will point to the module object
   module = {};
 
-  var use2d = true;
+  var use2d = false;
 
   var linkToIndex = {};
   var dragging_object = false;
+  var drag_point_attached = false;
 
   var arm_link_name = 'l_shoulder_pan_link';
   var arm;
@@ -253,7 +254,10 @@ var IK = (function () {
 
   function handleMouseDown(event) {
       if (!use2d) {
-          attachDragPointToLink(marker.getWorldPosition(), robot.getObjectByName('l_gripper_palm_link'));
+          if (!drag_point_attached) {
+              attachDragPointToLink(marker.getWorldPosition(), robot.getObjectByName('l_gripper_palm_link'));
+              drag_point_attached = true;
+          }
           setDragging(true);
       } else {
           // update the picking ray with the camera and mouse position
