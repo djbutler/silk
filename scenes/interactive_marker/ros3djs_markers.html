@@ -91,6 +91,12 @@ margin: 0px;
     // Add a grid.
     viewer.addObject(new ROS3D.Grid({color: '#999999'}));
 
+    // Re-color robot 
+    var arm_link_name = 'l_shoulder_pan_link';
+    THREE.Object3D.prototype.traverseDepth = function (a, i) {if(!1!==this.visible){a(this, i);for(var b=this.children,c=0,d=b.length;c<d;c++)b[c].traverseDepth(a,i+1)}};
+    dae.traverseDepth(function(obj, i) { if (obj.material) { obj.material.color.setHex(0x999999) ; } }, 0);
+    dae.getObjectByName(arm_link_name).traverseDepth(function(obj, i) { if (obj.material) { obj.material.color.setHex(0x669966) ; } }, 0);
+
     // Add robot
     dae.applyMatrix((new THREE.Matrix4).makeRotationX(Math.PI/2))
     dae.scale.multiplyScalar(0.3);
