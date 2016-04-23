@@ -51,6 +51,8 @@ var IK = (function () {
         solver.addTargetPoint2D();
     } else {
         solver.addTargetPoint3D();
+        solver.addTargetPoint3D();
+        solver.addTargetPoint3D();
         // move marker
         setTimeout(function() { marker.position.copy(robot.getObjectByName('l_gripper_palm_link').getWorldPosition()); }, 1000);
     }
@@ -85,12 +87,13 @@ var IK = (function () {
   }
 
   function getControlPoints(obj) {
+      var pos = obj.getWorldPosition().clone();
       var x_offset = new THREE.Vector3(1, 0, 0);
       var y_offset = new THREE.Vector3(0, 1, 0);
       var points = [
-        obj.position,
-        obj.position.clone().add(x_offset.applyQuaternion(obj.quaternion)),
-        obj.position.clone().add(y_offset.applyQuaternion(obj.quaternion))
+        pos.clone(),
+        pos.clone().add(x_offset.applyQuaternion(obj.quaternion)),
+        pos.clone().add(y_offset.applyQuaternion(obj.quaternion))
       ]
       return points;
   }
@@ -198,7 +201,7 @@ var IK = (function () {
   }
 
   // Called once at the beginning of a drag in order to reset the IK optimization
-  function attachDragPointToLink(point, link) {
+  function attachDragPointToLink(pt_idx, point, link) {
       initSolverSceneGraph();
 
       // Set 2D drag point
@@ -207,22 +210,20 @@ var IK = (function () {
       while (!linkToIndex[nearest_link.name]) {
           nearest_link = nearest_link.parent;
       }
-      var drag_point_local = nearest_link.worldToLocal(drag_point.clone());
-      console.log('drag_point_local');
-      console.log(drag_point_local);
       if (use2d) {
-        solver.setDragPoint2D(0, [drag_point_local.x, drag_point_local.y, drag_point_local.z]);
+          var drag_point_local = nearest_link.worldToLocal(drag_point.clone());
+          solver.setDragPoint2D(pt_idx, [drag_point_local.x, drag_point_local.y, drag_point_local.z]);
+          // Visualize the drag point
+          drag_point_visual.position.set(drag_point_local.x, drag_point_local.y, drag_point_local.z);
+          if (drag_point_visual.parent) {
+              drag_point_visual.parent.remove(drag_point_visual);
+          }
+          nearest_link.add(drag_point_visual);
       } else {
-        solver.setDragPoint3D(0, [drag_point_local.x, drag_point_local.y, drag_point_local.z]);
+          var drag_point_local = nearest_link.worldToLocal(drag_point.clone());
+          solver.setDragPoint3D(pt_idx, [drag_point_local.x, drag_point_local.y, drag_point_local.z]);
       }
       solver.setStartTransformIndex( linkToIndex[nearest_link.name] );
-
-      // Visualize the drag point
-      drag_point_visual.position.set(drag_point_local.x, drag_point_local.y, drag_point_local.z);
-      if (drag_point_visual.parent) {
-          drag_point_visual.parent.remove(drag_point_visual);
-      }
-      nearest_link.add(drag_point_visual);
 
       // Set screen size
       solver.setDims([renderer.domElement.width, renderer.domElement.height]);
@@ -237,7 +238,10 @@ var IK = (function () {
       if (use2d) {
           solver.setTargetPoint2D(0, [cursor.x, cursor.y]);
       } else {
-          solver.setTargetPoint3D(0, [marker.getWorldPosition().x, marker.getWorldPosition().y, marker.getWorldPosition().z]);
+          var controlPoints = getControlPoints(marker);
+          for (var i = 0; i < controlPoints.length; i++) {
+              solver.setTargetPoint3D(i, [controlPoints[i].x, controlPoints[i].y, controlPoints[i].z]);
+          }
       }
       solver.timeSolve(0.1);
       for (var i = 0; i < N_JOINTS; i++) {
@@ -255,7 +259,10 @@ var IK = (function () {
   function handleMouseDown(event) {
       if (!use2d) {
           if (!drag_point_attached) {
-              attachDragPointToLink(marker.getWorldPosition(), robot.getObjectByName('l_gripper_palm_link'));
+              var controlPoints = getControlPoints(marker);
+              for (var i = 0; i < controlPoints.length; i++) {
+                  attachDragPointToLink(i, controlPoints[i], robot.getObjectByName('l_gripper_palm_link'));
+              }
               drag_point_attached = true;
           }
           setDragging(true);
@@ -265,9 +272,7 @@ var IK = (function () {
           // calculate objects intersecting the picking ray
           var intersects = raycaster.intersectObject( arm, true );
           if (intersects.length > 0) {
-              attachDragPointToLink(intersects[0].point, intersects[0].object.parent);
-              console.log('intersects[0].object');
-              console.log(intersects[0].object);
+              attachDragPointToLink(0, intersects[0].point, intersects[0].object.parent);
               setDragging(true);
           } else {
               setDragging(false);
