@@ -83,11 +83,10 @@ margin: 0px;
 
     marker_client.processUpdate({markers:[marker_msg], erases:[], poses:[]});
     marker_obj = marker_client.rootObject.children[0];
+    marker_obj.scale.x = marker_obj.scale.y = marker_obj.scale.z = 0.7;
     // Quick hack to remove cube
     marker_obj.children.splice(0,1);
-    marker_obj.position.x = 2.5;
-    marker_obj.position.y = 1;
-    marker_obj.position.z = 2.5;
+    // TODO: replace the cube with a gripper model
 
     // Add a grid.
     viewer.addObject(new ROS3D.Grid({color: '#999999'}));
