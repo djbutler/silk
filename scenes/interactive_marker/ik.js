@@ -31,6 +31,8 @@ var IK = (function () {
   var kinematics;
   var marker;
 
+  var MARKER_OFFSET = 0.25;
+
   module.init = function (options) {
     var viewer = options.viewer;
     robot = options.robot;
@@ -54,7 +56,12 @@ var IK = (function () {
         solver.addTargetPoint3D();
         solver.addTargetPoint3D();
         // move marker
-        setTimeout(function() { marker.position.copy(robot.getObjectByName('l_gripper_palm_link').getWorldPosition()); }, 1000);
+        setTimeout(function() {
+            var pos = robot.getObjectByName('l_gripper_palm_link').getWorldPosition();
+            pos.x += MARKER_OFFSET;
+            console.log(pos);
+            marker.position.copy(pos);
+        }, 1000);
     }
 
     // Add solver callback
