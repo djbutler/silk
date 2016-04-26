@@ -46,6 +46,7 @@ margin: 0px;
   var loadingBar = document.body.appendChild(document.createElement('div'));
   var progressLogger = function (progress) {
       loadingBar.textContent = ("" + (100 * progress.loaded / parseInt(progress.total))).slice(0,5);
+      loadingBar.textContent += " / 100.0";
   }
 
   var loader = new THREE.ColladaLoader();
