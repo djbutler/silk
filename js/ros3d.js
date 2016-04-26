@@ -4361,7 +4361,7 @@ ROS3D.OrbitControls = function(options) {
         state = STATE.ROTATE;
         rotateStart.set(event.clientX, event.clientY);
         break;
-      case 1:
+      case 2:
         state = STATE.MOVE;
 
         moveStartNormal = new THREE.Vector3(0, 0, 1);
@@ -4374,7 +4374,7 @@ ROS3D.OrbitControls = function(options) {
                                                    moveStartCenter,
                                                    moveStartNormal);
         break;
-      case 2:
+      case 1:
         state = STATE.ZOOM;
         zoomStart.set(event.clientX, event.clientY);
         break;
