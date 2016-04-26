@@ -29,7 +29,10 @@ margin: 0px;
 
 <!-- <script src="http://cdn.robotwebtools.org/threejs/r61/ColladaLoader.js"></script> -->
 
-<script>
+</head>
+<!-- <body onload="init()"> -->
+<body>
+ <script>
   var ros, viewer, marker_client;
 
   var dae;
@@ -40,9 +43,16 @@ margin: 0px;
   var kinematicsTween;
   var tweenParameters = {};
 
+  var loadingBar = document.body.appendChild(document.createElement('div'));
+  var progressLogger = function (progress) {
+      loadingBar.textContent = ("" + (100 * progress.loaded / parseInt(progress.total))).slice(0,5);
+  }
+
   var loader = new THREE.ColladaLoader();
   loader.options.convertUpAxis = true;
   loader.load( '../../models/pr2/collada/openrave-pr2.dae', function ( collada_ ) {
+
+      loadingBar.textContent = "";
 
       collada = collada_;
       dae = collada.scene;
@@ -65,7 +75,7 @@ margin: 0px;
 
       init();
 
-  } );
+  }, progressLogger );
 
   function onWindowResize() {
 
@@ -137,10 +147,7 @@ margin: 0px;
     viewer.camera.position.applyMatrix4((new THREE.Matrix4).makeRotationX(Math.PI/2));
 }
 </script>
-</head>
-<!-- <body onload="init()"> -->
-<body>
-  <div id="markers"></div>
+ <div id="markers"></div>
   <!-- <script> init(); </script> -->
 </body>
 </html>
