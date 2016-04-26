@@ -64,6 +64,7 @@ public:
   int getNumTransforms() { return transforms.size(); }
 
   double getJointValue(int idx) { return robot_state_[idx]; } 
+  void setJointValue(int idx, double val) { robot_state_[idx] = val; } 
 
   void addJointTransform(double lower_bound, double upper_bound) {
       cout << "Adding joint transform number " << num_joints_ << endl;
@@ -316,6 +317,7 @@ EMSCRIPTEN_BINDINGS() {
         .function("setDims", &IKSolver::setDims)
         .function("getNumTransforms", &IKSolver::getNumTransforms)
         .function("getJointValue", &IKSolver::getJointValue)
+        .function("setJointValue", &IKSolver::setJointValue)
         .function("addJointTransform", &IKSolver::addJointTransform)
         .function("addStaticTransform", &IKSolver::addStaticTransform)
         .function("setCameraMatrix", &IKSolver::setCameraMatrix)

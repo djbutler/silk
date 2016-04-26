@@ -47,6 +47,7 @@ var IK = (function () {
 
     solver = new Module.IKSolver;
     module.solver = solver;
+    initJoints();
     if (use2d) {
         // HACK: remove marker
         viewer.selectableObjects.children.splice(0,1);
@@ -84,9 +85,11 @@ var IK = (function () {
     });
 
     // ROS3D callbacks
+    /*
     dae.addEventListener('mouseover', stopPropagation);
     dae.addEventListener('mousedown', stopPropagation);
     dae.addEventListener('mouseup', stopPropagation);
+    */
   }
 
   function stopPropagation(event) {
@@ -239,6 +242,22 @@ var IK = (function () {
       var a = new THREE.Matrix4;
       a.multiplyMatrices(camera.projectionMatrix, a.getInverse(camera.matrixWorld));
       solver.setCameraMatrix(a.elements);
+  }
+
+  function initJoints() {
+    var jointVals = [
+        57.40083954304086,
+        3.897952346576082,
+        114.94638942664692,
+        -110.95863793571972,
+        -153.2146794128689,
+        -59.56016827522665,
+        64.68627613717995,
+    ];
+    for (var i = 0; i < N_JOINTS; i++) {
+        solver.setJointValue(i, jointVals[i]);
+        kinematics.setJointValue(arm_joint_idx + i, jointVals[i]);
+    }
   }
 
   function solveIK() {
