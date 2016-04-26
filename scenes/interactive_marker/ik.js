@@ -31,7 +31,7 @@ var IK = (function () {
   var kinematics;
   var marker;
 
-  var MARKER_OFFSET = 0.25;
+  var MARKER_OFFSET = 0.75;
 
   module.init = function (options) {
     var viewer = options.viewer;
@@ -61,7 +61,7 @@ var IK = (function () {
             pos.x += MARKER_OFFSET;
             console.log(pos);
             marker.position.copy(pos);
-        }, 1000);
+        }, 100);
     }
 
     // Add solver callback

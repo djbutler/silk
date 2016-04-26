@@ -34,6 +34,7 @@ margin: 0px;
 
   var dae;
   var collada;
+  var particleLight;
 
   var kinematics;
   var kinematicsTween;
@@ -83,13 +84,31 @@ margin: 0px;
 
     marker_client.processUpdate({markers:[marker_msg], erases:[], poses:[]});
     marker_obj = marker_client.rootObject.children[0];
-    marker_obj.scale.x = marker_obj.scale.y = marker_obj.scale.z = 0.7;
+    marker_obj.scale.x = marker_obj.scale.y = marker_obj.scale.z = 2.1;
     // Quick hack to remove cube
     marker_obj.children.splice(0,1);
     // TODO: replace the cube with a gripper model
 
+    // Add light
+    /*
+    var light = new THREE.HemisphereLight( 0x333333, 0xffeeee );
+    viewer.scene.add( light );
+    */
+    viewer.scene.children[2].position.y = 0;
+    viewer.scene.children[2].position.z = -1;
+    viewer.camera.position.set( 33.2473216212127, 22.57002219279167, -19.15198843903227);
+
+    // Lights
+    particleLight = new THREE.Mesh( new THREE.SphereGeometry( 4, 8, 8 ), new THREE.MeshBasicMaterial( { color: 0xffffff } ) );
+    particleLight.position.set(-2611.7403539515544, -3454.272981693232, -1494.286894656113);
+    viewer.scene.add( particleLight );
+    //particleLight.position.applyMatrix4((new THREE.Matrix4).makeRotationX(Math.PI/2));
+
+    var pointLight = new THREE.PointLight( 0xffffff, 0.3 );
+    particleLight.add( pointLight );
+
     // Add a grid.
-    viewer.addObject(new ROS3D.Grid({color: '#999999'}));
+    viewer.addObject(new ROS3D.Grid({num_cells: 28, color: '#999999'}));
 
     // Re-color robot 
     var arm_link_name = 'l_shoulder_pan_link';
@@ -98,13 +117,14 @@ margin: 0px;
     dae.getObjectByName(arm_link_name).traverseDepth(function(obj, i) { if (obj.material) { obj.material.color.setHex(0x669966) ; } }, 0);
 
     // Add robot
-    dae.applyMatrix((new THREE.Matrix4).makeRotationX(Math.PI/2))
-    dae.scale.multiplyScalar(0.3);
+    dae.applyMatrix((new THREE.Matrix4).makeRotationX(Math.PI/2));
+    //dae.scale.multiplyScalar(0.3);
     viewer.addObject( dae, true );
 
     // Initialize IK 
     IK.init({viewer: viewer, robot: dae, kinematics: kinematics, marker: marker_obj});
 
+    viewer.camera.position.applyMatrix4((new THREE.Matrix4).makeRotationX(Math.PI/2));
 }
 </script>
 </head>
