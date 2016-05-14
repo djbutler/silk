@@ -62,7 +62,9 @@ var IK = (function () {
             pos.x += MARKER_OFFSET;
             console.log(pos);
             marker.position.copy(pos);
-        }, 100);
+            //marker.addEventListener('mousedown', handleMouseDown);
+            //marker.addEventListener('mouseup', handleMouseUp);
+        }, 5555500);
     }
 
     // Add solver callback
