@@ -111,18 +111,18 @@ margin: 0px;
     // TODO: replace the cube with a gripper model
 
     // Add light
-    /*
-    var light = new THREE.HemisphereLight( 0x333333, 0xffeeee );
-    viewer.scene.add( light );
-    */
-    viewer.scene.children[2].position.y = 0;
-    viewer.scene.children[2].position.z = -1;
+    
+//    var light = new THREE.HemisphereLight( 0xffeeee, 0x333333 );
+//    viewer.scene.add( light );
+    
+    viewer.scene.children[2].position.y = 1;
+    viewer.scene.children[2].position.z = 1;
     viewer.camera.position.set( 33.2473216212127, 22.57002219279167, -19.15198843903227);
 
     // Lights
-    particleLight = new THREE.Mesh( new THREE.SphereGeometry( 4, 8, 8 ), new THREE.MeshBasicMaterial( { color: 0xffffff } ) );
-    particleLight.position.set(-2611.7403539515544, -3454.272981693232, -1494.286894656113);
-    viewer.scene.add( particleLight );
+   particleLight = new THREE.Mesh( new THREE.SphereGeometry( 4, 8, 8 ), new THREE.MeshBasicMaterial( { color: 0xffffff } ) );
+   particleLight.position.set(-2611.7403539515544, -3454.272981693232, -1494.286894656113);
+   viewer.scene.add( particleLight );
     //particleLight.position.applyMatrix4((new THREE.Matrix4).makeRotationX(Math.PI/2));
 
     var pointLight = new THREE.PointLight( 0xffffff, 0.3 );
