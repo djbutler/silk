@@ -64,7 +64,7 @@ var IK = (function () {
             marker.position.copy(pos);
             //marker.addEventListener('mousedown', handleMouseDown);
             //marker.addEventListener('mouseup', handleMouseUp);
-        }, 5555500);
+        }, 500);
     }
 
     // Add solver callback
