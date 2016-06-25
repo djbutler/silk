@@ -123,6 +123,7 @@
                 }
 
                 function updateCursor3d() {
+                    raycaster.setFromCamera( cursor_normalized, camera );
                     var intersects = raycaster.intersectObject( drag_plane, true );
                     if (intersects.length > 0) {
                         cursor3d.position.copy(intersects[0].point);
@@ -175,7 +176,6 @@
                             cursor_normalized.y = - ( this.touches[0].y / window.innerHeight ) * 2 + 1;
                             cursor.x = this.touches[0].x;
                             cursor.y = this.touches[0].y;
-                            raycaster.setFromCamera( cursor_normalized, camera );
                             if (dragging_object) {
                                 updateCursor3d();
                             }
@@ -265,7 +265,7 @@
                 }
 
                 function solveIK() {
-                    solver.screen_point = [cursor.x, cursor.y];
+                    solver.target_point = [cursor3d.position.x, cursor3d.position.y, cursor3d.position.z];
                     solver.timeSolve(0.1);
                     for (var i = 0; i < N_JOINTS; i++) {
                         kinematics.setJointValue(arm_joint_idx + i, solver.getJointValue(i));
@@ -274,6 +274,7 @@
 
                 function movePlane(point) {
                     drag_plane.position.copy(point);
+                    drag_plane.updateMatrix();
                 }
 
                 function setDragging(dragging) {

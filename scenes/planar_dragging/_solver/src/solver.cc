@@ -38,8 +38,9 @@ public:
   double width_;
   double height_;
   double robot_state_[7];
-  double screen_x_;
-  double screen_y_;
+  double target_x_;
+  double target_y_;
+  double target_z_;
   double drag_x_;
   double drag_y_;
   double drag_z_;
@@ -50,7 +51,7 @@ public:
   int num_joints_;
   int start_transform_index_;
   
-  IKSolver() : start_transform_index_(0), num_joints_(0), screen_x_(0.0), screen_y_(0.0), drag_x_(0.0), drag_y_(0.0), drag_z_(0.0) {
+  IKSolver() : start_transform_index_(0), num_joints_(0), target_x_(0.0), target_y_(0.0), target_z_(0.0), drag_x_(0.0), drag_y_(0.0), drag_z_(0.0) {
     buildProblem();
   }
   
@@ -102,9 +103,10 @@ public:
     height_ = dims.y;
   }
 
-  Point2D getScreenPoint() const { return Point2D(screen_x_, screen_y_); }
-  void setScreenPoint(Point2D screen_point) { screen_x_ = screen_point.x;
-                                              screen_y_ = screen_point.y; }
+  Point3D getTargetPoint() const { return Point3D(target_x_, target_y_, target_z_); }
+  void setTargetPoint(Point3D target_point) { target_x_ = target_point.x;
+                                              target_y_ = target_point.y;
+                                              target_z_ = target_point.z; }
   
   Point3D getDragPoint() const { return Point3D(drag_x_, drag_y_, drag_z_); }
   void setDragPoint(Point3D drag_point) { drag_x_ = drag_point.x;
@@ -160,11 +162,14 @@ struct CostFunctor {
     }
 
     // Camera projection
+    /*
     Eigen::Matrix<T,2,1> pt_cam(T(0.0), T(0.0));
     solver_->projectPoint(v, pt_cam);
+    */
 
-    residual[0] = pt_cam(0) - T(solver_->screen_x_);
-    residual[1] = pt_cam(1) - T(solver_->screen_y_);
+    residual[0] = v(0)/v(3) - T(solver_->target_x_);
+    residual[1] = v(1)/v(3) - T(solver_->target_y_);
+    residual[2] = v(2)/v(3) - T(solver_->target_z_);
 
     return true;
   }
@@ -174,7 +179,7 @@ struct CostFunctor {
 
 void IKSolver::buildProblem() {
     CostFunction* cost_function =
-        new AutoDiffCostFunction<CostFunctor, 2, 7>(new CostFunctor(this));
+        new AutoDiffCostFunction<CostFunctor, 3, 7>(new CostFunctor(this));
     problem_.AddResidualBlock(cost_function, NULL, robot_state_);
 }
 
@@ -243,7 +248,7 @@ EMSCRIPTEN_BINDINGS() {
         .function("addStaticTransform", &IKSolver::addStaticTransform)
         .function("setCameraMatrix", &IKSolver::setCameraMatrix)
         .function("projectDragPoint", &IKSolver::projectDragPoint)
-        .property("screen_point", &IKSolver::getScreenPoint, &IKSolver::setScreenPoint)
+        .property("target_point", &IKSolver::getTargetPoint, &IKSolver::setTargetPoint)
         .property("drag_point", &IKSolver::getDragPoint, &IKSolver::setDragPoint)
         .function("setStartTransformIndex", &IKSolver::setStartTransformIndex)
         ;
@@ -254,7 +259,7 @@ EMSCRIPTEN_BINDINGS() {
 int main(int argc, char** argv) {
   IKSolver solver;
   solver.setDragPoint(Point3D(0.0, 0.5, 0.5));
-  solver.setScreenPoint(Point2D(0.5, 0.5));
+  solver.setTargetPoint(Point3D(0.5, 0.5, 0.5));
   solver.stepSolve(10);
   double angle = solver.getJointValue(0);
   cout << "angle = " << angle << "\n";
