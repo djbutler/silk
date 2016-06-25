@@ -56,6 +56,7 @@
                 var kinematics;
 
                 var cursor = new THREE.Vector2( -200, -200 );
+                var cursor3d;
                 var cursor_normalized = new THREE.Vector2( -200, -200 );
                 var drag_point = new THREE.Vector3( 0, 0, 0);
                 var projected_point = new THREE.Vector2( -200, -200 );
@@ -121,6 +122,14 @@
                     return point;
                 }
 
+                function updateCursor3d() {
+                    var intersects = raycaster.intersectObject( drag_plane, true );
+                    if (intersects.length > 0) {
+                        cursor3d.position.copy(intersects[0].point);
+                        console.log(intersects);
+                    }
+                }
+
                 function projectPoint() {
                     var arm = dae.getObjectByName(arm_link_name);
                     raycaster.setFromCamera( cursor_normalized, camera );
@@ -166,7 +175,10 @@
                             cursor_normalized.y = - ( this.touches[0].y / window.innerHeight ) * 2 + 1;
                             cursor.x = this.touches[0].x;
                             cursor.y = this.touches[0].y;
-                            //intersectDragPlane();
+                            raycaster.setFromCamera( cursor_normalized, camera );
+                            if (dragging_object) {
+                                updateCursor3d();
+                            }
                         },
                         autopause: false
                     });
@@ -237,7 +249,7 @@
                     solver.setStartTransformIndex( linkToIndex[nearest_link.name] );
                     
                     // Visualize the drag point
-                    drag_point_visual.position.set(drag_point_local.x, drag_point_local.y, drag_point_local.z);
+                    drag_point_visual.position.copy(drag_point_local);
                     if (drag_point_visual.parent) {
                         drag_point_visual.parent.remove(drag_point_visual);
                     }
@@ -267,6 +279,7 @@
                 function setDragging(dragging) {
                     dragging_object = dragging;
                     drag_point_visual.visible = dragging;
+                    cursor3d.visible = dragging;
                     drag_plane.visible = dragging;
                     controls.enabled = !dragging;
                     controls.enableRotate = !dragging;
@@ -285,6 +298,7 @@
                     } else {
                         setDragging(false);
                     }
+                    updateCursor3d();
                 }
 
                 function handleMouseUp() {
@@ -348,10 +362,17 @@
                     drag_point_visual = new THREE.Mesh( geometry, material );
                     drag_point_visual.visible = false;
 
+                    // Cursor3D
+                    material = new THREE.MeshBasicMaterial( { color: 0x000000 } );
+                    geometry = new THREE.SphereGeometry(0.1); 
+                    cursor3d = new THREE.Mesh( geometry, material );
+                    //cursor3d.visible = true;
+                    scene.add( cursor3d );
+
                     // Drag plane
                     drag_plane = new THREE.Mesh(
                     new THREE.PlaneBufferGeometry( 2000, 2000, 8, 8 ),
-                    new THREE.MeshBasicMaterial( { visible: true } )
+                    new THREE.MeshBasicMaterial( { color: 0x999999, transparent:true, opacity: 0.7 } )
                     );
                     drag_plane.material.side = THREE.DoubleSide;
                     drag_plane.rotateX(Math.PI/2);
