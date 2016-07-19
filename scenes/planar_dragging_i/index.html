@@ -127,7 +127,6 @@
                     var intersects = raycaster.intersectObject( drag_plane, true );
                     if (intersects.length > 0) {
                         cursor3d.position.copy(intersects[0].point);
-                        console.log(intersects);
                     }
                 }
 
@@ -170,18 +169,22 @@
                         touchstart: handleMouseDown,
                         touchend: handleMouseUp, 
                         touchmove: function() {
-                            // calculate mouse position in normalized device coordinates
-                            // (-1 to +1) for both components
-                            cursor_normalized.x = ( this.touches[0].x / window.innerWidth ) * 2 - 1;
-                            cursor_normalized.y = - ( this.touches[0].y / window.innerHeight ) * 2 + 1;
-                            cursor.x = this.touches[0].x;
-                            cursor.y = this.touches[0].y;
+                            update2dCursors(this.touches[0]);
                             if (dragging_object) {
                                 updateCursor3d();
                             }
                         },
                         autopause: false
                     });
+                }
+
+                function update2dCursors(point) {
+                    // calculate mouse position in normalized device coordinates
+                    // (-1 to +1) for both components
+                    cursor_normalized.x = ( point.x / window.innerWidth ) * 2 - 1;
+                    cursor_normalized.y = - ( point.y / window.innerHeight ) * 2 + 1;
+                    cursor.x = point.x;
+                    cursor.y = point.y;
                 }
 
                 N_JOINTS = 4;
@@ -287,6 +290,7 @@
                 }
 
                 function handleMouseDown() {
+                    update2dCursors(this.touches[0]);
                     // update the picking ray with the camera and mouse position    
                     raycaster.setFromCamera( cursor_normalized, camera );   
                     // calculate objects intersecting the picking ray
@@ -295,6 +299,7 @@
                     if (intersects.length > 0) {
                         initIK(intersects[0].point, intersects[0].object.parent, arm);
                         movePlane(intersects[0].point);
+                        updateCursor3d();
                         setDragging(true);
                     } else {
                         setDragging(false);

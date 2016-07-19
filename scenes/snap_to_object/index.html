@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+
+<style>
+body {
+margin: 0px;
+}
+</style>
+
+<script src="../../js/three.min.js"></script>
+
+<script src="../../js/loaders/ColladaLoader.js"></script>
+<script src="../../js/renderers/Projector.js"></script>
+<script src="../../js/controls/OrbitControls.js"></script>
+<script src="../../js/Detector.js"></script>
+
+<!-- <script src="http://cdn.robotwebtools.org/threejs/current/three.min.js"></script> -->
+
+<script src="http://cdn.robotwebtools.org/EventEmitter2/current/eventemitter2.min.js"></script>
+<script src="http://cdn.robotwebtools.org/roslibjs/current/roslib.min.js"></script>
+<script src="../../js/ros3d.js"></script>
+
+<script src="../../js/marker_msg_6dof.js"></script>
+
+<script src="solver.js"></script>
+<script src="ik.js"></script>
+
+<!-- <script src="http://cdn.robotwebtools.org/threejs/r61/ColladaLoader.js"></script> -->
+
+</head>
+<!-- <body onload="init()"> -->
+<body>
+ <script>
+  var ros, viewer, marker_client;
+
+  var dae;
+  var collada;
+  var particleLight;
+
+  var kinematics;
+  var kinematicsTween;
+  var tweenParameters = {};
+
+  var loadingBar = document.body.appendChild(document.createElement('div'));
+  var progressLogger = function (progress) {
+      loadingBar.textContent = ("" + (100 * progress.loaded / parseInt(progress.total))).slice(0,5);
+      loadingBar.textContent += " / 100.0 %";
+  }
+
+  var loader = new THREE.ColladaLoader();
+  loader.options.convertUpAxis = true;
+  loader.load( '../../models/pr2/collada/openrave-pr2.dae', function ( collada_ ) {
+
+      loadingBar.textContent = "";
+
+      collada = collada_;
+      dae = collada.scene;
+
+      dae.traverse( function ( child ) {
+
+          if ( child instanceof THREE.Mesh ) {
+
+              child.geometry.computeFaceNormals();
+              child.material.shading = THREE.FlatShading;
+
+          }
+
+      } );
+
+      dae.scale.x = dae.scale.y = dae.scale.z = 10.0;
+      dae.updateMatrix();
+
+      kinematics = collada.kinematics;
+
+      init();
+
+  }, progressLogger );
+
+  function onWindowResize() {
+
+      viewer.camera.aspect = window.innerWidth / window.innerHeight;
+      viewer.camera.updateProjectionMatrix();
+
+      viewer.renderer.setSize( window.innerWidth, window.innerHeight );
+
+  }
+
+  function init() {
+    viewer = new ROS3D.Viewer({
+      divID : 'markers',
+      width : window.innerWidth,
+      height : window.innerHeight,
+      antialias : true,
+      background:  '#cccccc'
+    });
+    window.addEventListener( 'resize', onWindowResize, false );
+
+    marker_client = new ROS3D.InteractiveMarkerClient({
+      pure_client_side : true,
+      camera : viewer.camera,
+      rootObject : viewer.selectableObjects
+    });
+
+    marker_client.processUpdate({markers:[marker_msg], erases:[], poses:[]});
+    marker_obj = marker_client.rootObject.children[0];
+    marker_obj.scale.x = marker_obj.scale.y = marker_obj.scale.z = 2.1;
+    // Quick hack to remove cube
+    marker_obj.children.splice(0,1);
+    // TODO: replace the cube with a gripper model
+
+    // Add light
+    
+//    var light = new THREE.HemisphereLight( 0xffeeee, 0x333333 );
+//    viewer.scene.add( light );
+    
+    viewer.scene.children[2].position.y = 1;
+    viewer.scene.children[2].position.z = 1;
+    viewer.camera.position.set( 33.2473216212127, 22.57002219279167, -19.15198843903227);
+
+    // Lights
+   particleLight = new THREE.Mesh( new THREE.SphereGeometry( 4, 8, 8 ), new THREE.MeshBasicMaterial( { color: 0xffffff } ) );
+   particleLight.position.set(-2611.7403539515544, -3454.272981693232, -1494.286894656113);
+   viewer.scene.add( particleLight );
+    //particleLight.position.applyMatrix4((new THREE.Matrix4).makeRotationX(Math.PI/2));
+
+    var pointLight = new THREE.PointLight( 0xffffff, 0.3 );
+    particleLight.add( pointLight );
+
+    // Add a grid.
+    viewer.addObject(new ROS3D.Grid({num_cells: 28, color: '#999999'}));
+
+    // Re-color robot 
+    var arm_link_name = 'l_shoulder_pan_link';
+    THREE.Object3D.prototype.traverseDepth = function (a, i) {if(!1!==this.visible){a(this, i);for(var b=this.children,c=0,d=b.length;c<d;c++)b[c].traverseDepth(a,i+1)}};
+    dae.traverseDepth(function(obj, i) { if (obj.material) { obj.material.color.setHex(0x999999) ; } }, 0);
+    dae.getObjectByName(arm_link_name).traverseDepth(function(obj, i) { if (obj.material) { obj.material.color.setHex(0x669966) ; } }, 0);
+
+    // Add robot
+    dae.applyMatrix((new THREE.Matrix4).makeRotationX(Math.PI/2));
+    //dae.scale.multiplyScalar(0.3);
+    viewer.addObject( dae, true );
+
+    // Initialize IK 
+    IK.init({viewer: viewer, robot: dae, kinematics: kinematics, marker: marker_obj});
+
+    viewer.camera.position.applyMatrix4((new THREE.Matrix4).makeRotationX(Math.PI/2));
+}
+</script>
+ <div id="markers"></div>
+  <!-- <script> init(); </script> -->
+</body>
+</html>
