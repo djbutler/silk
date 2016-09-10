@@ -3,9 +3,16 @@
 <head>
 <meta charset="utf-8" />
 
+<link rel="stylesheet" type="text/css" href="../../css/silk.css">
+
 <style>
 body {
-margin: 0px;
+  margin: 0px;
+  background-color: #cccccc;
+  overflow: hidden;
+}
+.column {
+    max-width: none;
 }
 </style>
 
@@ -29,9 +36,26 @@ margin: 0px;
 
 <!-- <script src="http://cdn.robotwebtools.org/threejs/r61/ColladaLoader.js"></script> -->
 
+
 </head>
 <!-- <body onload="init()"> -->
 <body>
+
+    <div class="column">
+
+            <div id="markers"></div>
+            
+            <div class="blurb">
+                <div class="title">Snap to Object</div>
+                <div class="description">The PR2 gripper snaps to the XZ plane.</div>
+            </div>
+
+            <div class="navigation">
+                <a href="../../">Top</a> / <a href="../../about.html">About</a>
+            </div>
+
+    </div>
+
  <script>
   var ros, viewer, marker_client;
 
@@ -148,7 +172,6 @@ margin: 0px;
     viewer.camera.position.applyMatrix4((new THREE.Matrix4).makeRotationX(Math.PI/2));
 }
 </script>
- <div id="markers"></div>
   <!-- <script> init(); </script> -->
 </body>
 </html>
