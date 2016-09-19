@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <title>Silk - Full IK</title>
+        <title>Silk - Basic Physics II</title>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
         <link rel="stylesheet" type="text/css" href="../../css/silk.css">
@@ -39,8 +39,8 @@
 
                 'use strict';
 
-                Physijs.scripts.worker = '/js/physijs_worker.js';
-                Physijs.scripts.ammo = '/js/ammo.js';
+                Physijs.scripts.worker = 'physijs_worker.js';
+                Physijs.scripts.ammo = 'ammo.js';
 
                 var container, stats;
 
@@ -58,6 +58,7 @@
 
                 var dae;
                 var collada;
+                var box;
 
                 var kinematics;
 
@@ -304,6 +305,7 @@
                     camera.position.set( 33.2473216212127, 22.57002219279167, -19.15198843903227); 
 
                     scene = new Physijs.Scene;
+                    scene.setGravity(new THREE.Vector3( 0, -30, 0 ));
 
                     // Grid
                     var size = 14, step = 1;
@@ -349,6 +351,13 @@
 
                     // Arm index
                     arm_joint_idx = findJointByName(arm_link_name);
+
+                    // Box
+                    box = new Physijs.BoxMesh(
+                        new THREE.CubeGeometry( 5, 5, 5 ),
+                        new THREE.MeshBasicMaterial({ color: 0x888888 })
+                    );
+                    scene.add( box );
 
                     // Lights
                     particleLight = new THREE.Mesh( new THREE.SphereGeometry( 4, 8, 8 ), new THREE.MeshBasicMaterial( { color: 0xffffff } ) );
